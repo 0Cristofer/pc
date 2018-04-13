@@ -35,17 +35,14 @@ local int lastrand;   /* the last random number */
 
 double prand();
 
-double xrand(xl, xh)
-  double xl, xh;		/* lower, upper bounds on number */
-{
+double xrand(double xl, double xh){
    long random ();
    double x;
 
    return (xl + (xh - xl) * prand());
 }
 
-void pranset(int seed)
-{
+void pranset(int seed){
    int proc;
 
    A = 1;
@@ -55,12 +52,10 @@ void pranset(int seed)
    B = (MULT*B + ADD) & MASK;
 }
 
-double
-prand()
 /*
-	Return a random double in [0, 1.0)
+Return a random double in [0, 1.0)
 */
-{
+double prand(){
    lastrand = randx;
    randx = (A*randx+B) & MASK;
    return((double)lastrand/TWOTO31);
@@ -73,13 +68,12 @@ prand()
 #include <sys/types.h>
 #include <sys/times.h>
 
-
-double cputime()
-{
+double cputime(){
    struct tms buffer;
 
    if (times(&buffer) == -1)
       error("times() call failed\n");
+
    return (buffer.tms_utime / (60.0 * HZ));
 }
 
