@@ -164,7 +164,7 @@ leafptr InitLeaf(cellptr parent, unsigned ProcessId){
 	return (l);
 }
 
-printtree (nodeptr n){
+void printtree (nodeptr n){
 	int k;
 	cellptr c;
 	leafptr l;

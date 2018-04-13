@@ -81,9 +81,7 @@ double cputime(){
  * ERROR: scream and die quickly.
  */
 
-error(msg, a1, a2, a3, a4)
-  char *msg, *a1, *a2, *a3, *a4;
-{
+error(char msg, char a1, char a2, char a3, char a4) {
    //extern int errno;
 
    fprintf(stderr, msg, a1, a2, a3, a4);

@@ -340,7 +340,7 @@ ANLinit(){
 /*
  * INIT_ROOT: Processor 0 reinitialize the global root at each time step
  */
-init_root (unsigned int ProcessId){
+void init_root (unsigned int ProcessId){
   int i;
 
   Global->G_root=Local[0].ctab;
@@ -353,10 +353,7 @@ init_root (unsigned int ProcessId){
   Local[0].mynumcell=1;
 }
 
-int Log_base_2(number)
-int number;
-
-{
+int Log_base_2(int number) {
   int cumulative;
   int out;
 
@@ -582,7 +579,7 @@ testdata(){
  */
 /* vec = coordinate vector chosen */
 /* rad = radius of chosen point */
-pickshell(real vec[], real rad){
+void pickshell(real vec[], real rad){
   register int k;
   double rsq, xrand(), sqrt(), rsc;
 
@@ -861,7 +858,7 @@ void ComputeForces (unsigned int ProcessId){
  * assigned to the processor.
  */
 
-find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
+void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
   int Myindex;
   int intpow();
   int equalbodies;
@@ -908,7 +905,7 @@ find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
   };
 }
 
-find_my_bodies(nodeptr mycell, int work, int direction, unsigned ProcessId){
+void find_my_bodies(nodeptr mycell, int work, int direction, unsigned ProcessId){
   int i;
   leafptr l;
   nodeptr qptr;

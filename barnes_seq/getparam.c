@@ -34,7 +34,7 @@ local string *defaults = NULL;        /* vector of "name=value" strings */
  * INITPARAM: ignore arg vector, remember defaults.
  */
 
-initparam(string *argv, string *defv){
+void initparam(string *argv, string *defv){
   defaults = defv;
 }
 

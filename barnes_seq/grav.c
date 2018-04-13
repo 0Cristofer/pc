@@ -33,7 +33,7 @@ extern pthread_t PThreadTable[];
 /*
  * HACKGRAV: evaluate grav field at a given particle.
  */
-hackgrav(bodyptr p, unsigned ProcessId){
+void hackgrav(bodyptr p, unsigned ProcessId){
    extern gravsub();
 
    Local[ProcessId].pskip = p;
