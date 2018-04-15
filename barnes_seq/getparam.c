@@ -18,13 +18,10 @@
  * GETPARAM.C:
  */
 
-#include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-extern pthread_t PThreadTable[];
-
 
 #include "stdinc.h"
 
@@ -49,10 +46,10 @@ string getparam(string name){
   char* temp;
 
   if (defaults == NULL)
-  error("getparam: called before initparam\n");
+  error1("getparam: called before initparam\n");
   i = scanbind(defaults, name);
   if (i < 0)
-  error("getparam: %s unknown\n", name);
+  error2("getparam: %s unknown\n", name);
   def = extrvalue(defaults[i]);
   gets(buf);
   leng = strlen(buf) + 1;
@@ -101,7 +98,7 @@ bool getbparam(string name){
   if (strchr("fFnN0", *val) != NULL) {
     return (FALSE);
   }
-  error("getbparam: %s=%s not bool\n", name, val);
+  error3("getbparam: %s=%s not bool\n", name, val);
 }
 
 double getdparam(string name){

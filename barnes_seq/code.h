@@ -49,10 +49,6 @@ global int maxmycell;		/* max num. of cells to be allocated */
 global int maxmyleaf;		/* max num. of leaves to be allocated */
 global bodyptr bodytab; 	/* array size is exactly nbody bodies */
 
-global struct CellLockType {
-    pthread_mutex_t CL[MAXLOCK];        /* locks on the cells*/
-} *CellLock;
-
 struct GlobalMemory  {	/* all this info is for the whole system */
     int n2bcalc;       /* total number of body/cell interactions  */
     int nbccalc;       /* total number of body/body interactions  */
@@ -70,56 +66,40 @@ struct GlobalMemory  {	/* all this info is for the whole system */
     real rsize;        /* side-length of integer coordinate box   */
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Barstart);
    /* barrier at the beginning of stepsystem  */
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Bartree);
     /* barrier after loading the tree          */
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Barcom);
      /* barrier after computing the c. of m.    */
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Barload);
 
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Baraccel);
    /* barrier after accel and before output   */
 
 struct {
-	pthread_mutex_t	mutex;
-	pthread_cond_t	cv;
 	unsigned long	counter;
 	unsigned long	cycle;
 } (Barpos);
      /* barrier after computing the new pos     */
-    pthread_mutex_t (CountLock); /* Lock on the shared variables            */
-    pthread_mutex_t (NcellLock); /* Lock on the counter of array of cells for loadtree */
-    pthread_mutex_t (NleafLock);/* Lock on the counter of array of leaves for loadtree */
-    pthread_mutex_t (io_lock);
     unsigned long createstart,createend,computestart,computeend;
     unsigned long trackstart, trackend, tracktime;
     unsigned long partitionstart, partitionend, partitiontime;

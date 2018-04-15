@@ -1,5 +1,5 @@
 all:
-	gcc *.c -pthread -lm -o barnes
+	gcc *.c -lm -w -o barnes_seq
 
 clean:
-	rm barnes 
+	rm barnes_seq

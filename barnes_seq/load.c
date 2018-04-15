@@ -60,10 +60,9 @@ maketree(unsigned ProcessId){
 				ProcessId);
 			}
 			else {
-				{pthread_mutex_lock(&(Global->io_lock));};
+				//TRECHO ERA PARALELO
 				fprintf(stderr, "Process %d found body %d to have zero mass\n",
 				ProcessId, (int) p);
-				{pthread_mutex_unlock(&(Global->io_lock));};
 			}
 		}
 
@@ -71,28 +70,18 @@ maketree(unsigned ProcessId){
 			unsigned long	Error, Cycle;
 			int		Cancel, Temp;
 
-			Error = pthread_mutex_lock(&(Global->Bartree).mutex);
-			if (Error != 0) {
-				printf("Error while trying to get lock in barrier.\n");
-				exit(-1);
-			}
+			//TRECHO ERA PARALELO
 
 			Cycle = (Global->Bartree).cycle;
 			if (++(Global->Bartree).counter != (NPROC)) {
 				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
 				while (Cycle == (Global->Bartree).cycle) {
-					Error = pthread_cond_wait(&(Global->Bartree).cv, &(Global->Bartree).mutex);
-					if (Error != 0) {
-						break;
-					}
+					printf("Não era pra ter entrado aqui? :(\n");
 				}
-				pthread_setcancelstate(Cancel, &Temp);
 			} else {
 				(Global->Bartree).cycle = !(Global->Bartree).cycle;
 				(Global->Bartree).counter = 0;
-				Error = pthread_cond_broadcast(&(Global->Bartree).cv);
 			}
-			pthread_mutex_unlock(&(Global->Bartree).mutex);
 		};
 
 		hackcofm( 0, ProcessId );
@@ -101,28 +90,17 @@ maketree(unsigned ProcessId){
 			unsigned long	Error, Cycle;
 			int		Cancel, Temp;
 
-			Error = pthread_mutex_lock(&(Global->Barcom).mutex);
-			if (Error != 0) {
-				printf("Error while trying to get lock in barrier.\n");
-				exit(-1);
-			}
+			//TRECHO ERA PARALELO
 
 			Cycle = (Global->Barcom).cycle;
 			if (++(Global->Barcom).counter != (NPROC)) {
-				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
 				while (Cycle == (Global->Barcom).cycle) {
-					Error = pthread_cond_wait(&(Global->Barcom).cv, &(Global->Barcom).mutex);
-					if (Error != 0) {
-						break;
-					}
+					printf("Não era pra ter entrado aqui? :(\n");
 				}
-				pthread_setcancelstate(Cancel, &Temp);
 			} else {
 				(Global->Barcom).cycle = !(Global->Barcom).cycle;
 				(Global->Barcom).counter = 0;
-				Error = pthread_cond_broadcast(&(Global->Barcom).cv);
 			}
-			pthread_mutex_unlock(&(Global->Barcom).mutex);
 		};
 	}
 
@@ -297,12 +275,12 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 	flag = TRUE;
 	while (flag) {                           /* loop descending tree     */
 		if (l == 0) {
-			error("not enough levels in tree\n");
+			error1("not enough levels in tree\n");
 		}
 
 		if (*qptr == NULL) {
 			/* lock the parent cell */
-			{pthread_mutex_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			//TRECHO ERA PARALELO
 			if (*qptr == NULL) {
 				le = InitLeaf((cellptr) mynode, ProcessId);
 				Parent(p) = (nodeptr) le;
@@ -313,14 +291,11 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				*qptr = (nodeptr) le;
 				flag = FALSE;
 			}
-
-			{pthread_mutex_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
-			/* unlock the parent cell */
 		}
 
 		if (flag && *qptr && (Type(*qptr) == LEAF)) {
 			/*   reached a "leaf"?      */
-			{pthread_mutex_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			//ERA TRECHO PARALELO
 
 			/* lock the parent cell */
 			if (Type(*qptr) == LEAF){             /* still a "leaf"?      */
@@ -335,9 +310,6 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 					flag = FALSE;
 				}
 			}
-
-			/* unlock the node           */
-			{pthread_mutex_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
 		}
 
 		if (flag) {
@@ -563,7 +535,7 @@ cellptr makecell(unsigned ProcessId){
 	int i, Mycell;
 
 	if (Local[ProcessId].mynumcell == maxmycell) {
-		error("makecell: Proc %d needs more than %d cells; increase fcells\n",
+		error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
 		ProcessId,maxmycell);
 	}
 
@@ -591,7 +563,7 @@ leafptr makeleaf(unsigned ProcessId){
 	int i, Myleaf;
 
 	if (Local[ProcessId].mynumleaf == maxmyleaf) {
-		error("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
+		error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
 		ProcessId,maxmyleaf);
 	}
 
@@ -606,7 +578,7 @@ leafptr makeleaf(unsigned ProcessId){
 	for (i = 0; i < MAX_BODIES_PER_LEAF; i++) {
 		Bodyp(le)[i] = NULL;
 	}
-	
+
 	Local[ProcessId].myleaftab[Local[ProcessId].mynleaf++] = le;
 	return (le);
 }

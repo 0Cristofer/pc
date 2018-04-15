@@ -18,12 +18,10 @@
  * CODE_IO.C:
  */
 
-#include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-extern pthread_t PThreadTable[];
 
 #define global extern
 
@@ -48,22 +46,22 @@ inputdata (){
   fflush(stderr);
   instr = fopen(infile, "r");
   if (instr == NULL)
-  error("inputdata: cannot find file %s\n", infile);
+  error2("inputdata: cannot find file %s\n", infile);
   sprintf(headbuf, "Hack code: input file %s\n", infile);
   headline = headbuf;
   in_int(instr, &nbody);
   if (nbody < 1)
-  error("inputdata: nbody = %d is absurd\n", nbody);
+  error2("inputdata: nbody = %d is absurd\n", nbody);
   in_int(instr, &ndim);
   if (ndim != NDIM)
-  error("inputdata: NDIM = %d ndim = %d is absurd\n", NDIM,ndim);
+  error3("inputdata: NDIM = %d ndim = %d is absurd\n", NDIM,ndim);
   in_real(instr, &tnow);
   for (i = 0; i < MAX_PROC; i++) {
     Local[i].tnow = tnow;
   }
   bodytab = (bodyptr) malloc(nbody * sizeof(body));;
   if (bodytab == NULL)
-  error("inputdata: not enuf memory\n");
+  error1("inputdata: not enuf memory\n");
   for (p = bodytab; p < bodytab+nbody; p++) {
     Type(p) = BODY;
     Cost(p) = 1;
@@ -107,7 +105,7 @@ void output (unsigned int ProcessId){
   diagnostics(ProcessId);
 
   if (Local[ProcessId].mymtot!=0) {
-    {pthread_mutex_lock(&(Global->CountLock));};
+    //TRECHO ERA PARALELO
     Global->n2bcalc += Local[ProcessId].myn2bcalc;
     Global->nbccalc += Local[ProcessId].mynbccalc;
     Global->selfint += Local[ProcessId].myselfint;
@@ -126,35 +124,23 @@ void output (unsigned int ProcessId){
     ADDV(tempv1, tempv1, tempv2);
     DIVVS(Global->cmphase[1], tempv1, Global->mtot+Local[ProcessId].mymtot);
     Global->mtot +=Local[ProcessId].mymtot;
-    {pthread_mutex_unlock(&(Global->CountLock));};
   }
 
   {
     unsigned long	Error, Cycle;
     int		Cancel, Temp;
 
-    Error = pthread_mutex_lock(&(Global->Baraccel).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
+    //TRECHO ERA PARALELO
 
     Cycle = (Global->Baraccel).cycle;
     if (++(Global->Baraccel).counter != (NPROC)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
       while (Cycle == (Global->Baraccel).cycle) {
-        Error = pthread_cond_wait(&(Global->Baraccel).cv, &(Global->Baraccel).mutex);
-        if (Error != 0) {
-          break;
-        }
+        printf("Não era pra entrado aqui? :(\n");
       }
-      pthread_setcancelstate(Cancel, &Temp);
     } else {
       (Global->Baraccel).cycle = !(Global->Baraccel).cycle;
       (Global->Baraccel).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Baraccel).cv);
     }
-    pthread_mutex_unlock(&(Global->Baraccel).mutex);
   };
 
   if (ProcessId==0) {
@@ -217,14 +203,14 @@ void diagnostics (unsigned int ProcessId){
 
 void in_int(stream str,int *iptr){
   if (fscanf(str, "%d", iptr) != 1)
-  error("in_int: input conversion error\n");
+  error1("in_int: input conversion error\n");
 }
 
 void in_real(stream str, real *rptr){
   double tmp;
 
   if (fscanf(str, "%lf", &tmp) != 1)
-    error("in_real: input conversion error\n");
+    error1("in_real: input conversion error\n");
 
   *rptr = tmp;
 }
@@ -233,7 +219,7 @@ void in_vector(stream str, vector vec){
   double tmpx, tmpy, tmpz;
 
   if (fscanf(str, "%lf%lf%lf", &tmpx, &tmpy, &tmpz) != 3)
-    error("in_vector: input conversion error\n");
+    error1("in_vector: input conversion error\n");
 
   vec[0] = tmpx;    vec[1] = tmpy;    vec[2] = tmpz;
 }

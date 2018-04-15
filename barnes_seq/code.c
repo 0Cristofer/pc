@@ -65,14 +65,11 @@ Command line options:
        Default is 1.
 */
 
-
-#include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #define MAX_THREADS 1024
-pthread_t PThreadTable[MAX_THREADS];
 
 /* VERSAO SEQUENCIAL */
 
@@ -142,6 +139,8 @@ main(int argc, string argv[]) {
 
     Global->current_id = 0;
 
+    //TRECHO QUE ERA PARALELO
+
     /* Make the master do slave work so we don't waste the processor */
     {
         struct timeval	FullTime;
@@ -150,6 +149,7 @@ main(int argc, string argv[]) {
     };
 
     printf("COMPUTESTART  = %12lu\n",Global->computestart);
+    
     SlaveStart();
 
     {
@@ -157,6 +157,8 @@ main(int argc, string argv[]) {
         gettimeofday(&FullTime, NULL);
         (Global->computeend) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
+
+    //TRECHO QUE ERA PARALELO
 
     printf("COMPUTEEND    = %12lu\n",Global->computeend);
     printf("COMPUTETIME   = %12lu\n",Global->computeend - Global->computestart);
@@ -184,7 +186,7 @@ ANLinit(){
     /* Allocate global, shared memory */
     Global = (struct GlobalMemory *) malloc(sizeof(struct GlobalMemory));;
     if (Global==NULL) {
-        error("No initialization for Global\n");
+        error1("No initialization for Global\n");
     }
 
     (Global->Barload).counter = 0;
@@ -277,6 +279,7 @@ tab_init(){
 void SlaveStart(){
    unsigned int ProcessId;
 
+   //TRECHO QUE ERA PARALELO
    ProcessId = Global->current_id;
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
@@ -320,7 +323,7 @@ startrun(){
    else {
      nbody = getiparam("nbody");
      if (nbody < 1) {
-       error("startrun: absurd nbody\n");
+       error1("startrun: absurd nbody\n");
      }
      seed = getiparam("seed");
    }
@@ -367,7 +370,7 @@ testdata(){
    Local[0].tnow = 0.0;
    bodytab = (bodyptr) malloc(nbody * sizeof(body));;
    if (bodytab == NULL) {
-     error("testdata: not enuf memory\n");
+     error1("testdata: not enuf memory\n");
    }
    rsc = 9 * PI / 16;
    vsc = sqrt(1.0 / rsc);
@@ -495,8 +498,10 @@ void stepsystem (unsigned int ProcessId){
     unsigned long	Error, Cycle;
     int		Cancel, Temp;
 
-      (Global->Barstart).cycle = !(Global->Barstart).cycle;
-      (Global->Barstart).counter = 0;
+    //TRECHO ERA PARALELO
+
+    (Global->Barstart).cycle = !(Global->Barstart).cycle;
+    (Global->Barstart).counter = 0;
   };
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
@@ -509,7 +514,7 @@ void stepsystem (unsigned int ProcessId){
   }
 
   /* load bodies into tree   */
-  maketree(ProcessId); //TODO check function
+  maketree(ProcessId);
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
     {
       struct timeval	FullTime;
@@ -520,7 +525,7 @@ void stepsystem (unsigned int ProcessId){
     Global->treebuildtime += treebuildend - treebuildstart;
   }
 
-  Housekeep(ProcessId); //TODO check function
+  Housekeep(ProcessId);
 
   Cavg = (real) Cost(Global->G_root) / (real)1 ;
   Local[ProcessId].workMin = (int) (Cavg * ProcessId);
@@ -535,7 +540,7 @@ void stepsystem (unsigned int ProcessId){
   }
 
   Local[ProcessId].mynbody = 0;
-  find_my_bodies(Global->G_root, 0, BRC_FUC, ProcessId );
+  find_my_bodies(Global->G_root, 0, BRC_FUC, ProcessId);
 
   /*     B*RRIER(Global->Barcom,1); */
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
@@ -588,7 +593,8 @@ void stepsystem (unsigned int ProcessId){
         }
       }
     }
-    {pthread_mutex_lock(&(Global->CountLock));};
+
+    //TRECHO ERA PARALELO
     for (i = 0; i < NDIM; i++) {
       if (Global->min[i] > Local[ProcessId].min[i]) {
         Global->min[i] = Local[ProcessId].min[i];
@@ -597,8 +603,6 @@ void stepsystem (unsigned int ProcessId){
         Global->max[i] = Local[ProcessId].max[i];
       }
     }
-    {pthread_mutex_unlock(&(Global->CountLock));};
-
 
     /* bar needed to make sure that every process has computed its min */
     /* and max coordinates, and has accumulated them into the global   */
@@ -608,28 +612,15 @@ void stepsystem (unsigned int ProcessId){
       unsigned long	Error, Cycle;
       int		Cancel, Temp;
 
-      Error = pthread_mutex_lock(&(Global->Barpos).mutex);
-      if (Error != 0) {
-        printf("Error while trying to get lock in barrier.\n");
-        exit(-1);
-      }
-
+      //TRECHO ERA PARALELO
       Cycle = (Global->Barpos).cycle;
       if (++(Global->Barpos).counter != (1)) {
-        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-        while (Cycle == (Global->Barpos).cycle) {
-          Error = pthread_cond_wait(&(Global->Barpos).cv, &(Global->Barpos).mutex);
-          if (Error != 0) {
-            break;
-          }
-        }
-        pthread_setcancelstate(Cancel, &Temp);
+        //TRECHO PARALELO
+        printf("Não era pra ter entrado aqui? :(\n");
       } else {
         (Global->Barpos).cycle = !(Global->Barpos).cycle;
         (Global->Barpos).counter = 0;
-        Error = pthread_cond_broadcast(&(Global->Barpos).cv);
       }
-      pthread_mutex_unlock(&(Global->Barpos).mutex);
     };
 
     if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
@@ -657,9 +648,6 @@ void stepsystem (unsigned int ProcessId){
     Local[ProcessId].nstep++;
     Local[ProcessId].tnow = Local[ProcessId].tnow + dtime;
   }
-
-
-
 
 void ComputeForces (unsigned int ProcessId){
   bodyptr p,*pp;
@@ -690,7 +678,6 @@ void ComputeForces (unsigned int ProcessId){
  * FIND_MY_INITIAL_BODIES: puts into mybodytab the initial list of bodies
  * assigned to the processor.
  */
-
 void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
   int Myindex;
   int intpow();
@@ -703,38 +690,31 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
     Local[ProcessId].mynbody++;
     offset = Local[ProcessId].mynbody * ProcessId;
   }
+
   if (ProcessId >= extra) {
     offset = (Local[ProcessId].mynbody+1) * extra + (ProcessId - extra)
     * Local[ProcessId].mynbody;
   }
+
   for (i=0; i < Local[ProcessId].mynbody; i++) {
     Local[ProcessId].mybodytab[i] = &(btab[offset+i]);
   }
+
   {
     unsigned long	Error, Cycle;
     int		Cancel, Temp;
 
-    Error = pthread_mutex_lock(&(Global->Barstart).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
+    //TRECHO ERA PARALELO
+
     Cycle = (Global->Barstart).cycle;
     if (++(Global->Barstart).counter != (1)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
       while (Cycle == (Global->Barstart).cycle) {
-        Error = pthread_cond_wait(&(Global->Barstart).cv, &(Global->Barstart).mutex);
-        if (Error != 0) {
-          break;
-        }
+        printf("Não era pra ter entrado aqui? :(\n");
       }
-      pthread_setcancelstate(Cancel, &Temp);
     } else {
       (Global->Barstart).cycle = !(Global->Barstart).cycle;
       (Global->Barstart).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Barstart).cv);
     }
-    pthread_mutex_unlock(&(Global->Barstart).mutex);
   };
 }
 
@@ -748,7 +728,7 @@ void find_my_bodies(nodeptr mycell, int work, int direction, unsigned ProcessId)
     for (i = 0; i < l->num_bodies; i++) {
       if (work >= Local[ProcessId].workMin - .1) {
         if((Local[ProcessId].mynbody+2) > maxmybody) {
-          error("find_my_bodies: Processor %d needs more than %d bodies; increase fleaves\n",ProcessId, maxmybody);
+          error3("find_my_bodies: Processor %d needs more than %d bodies; increase fleaves\n",ProcessId, maxmybody);
         }
         Local[ProcessId].mybodytab[Local[ProcessId].mynbody++] =
         Bodyp(l)[i];

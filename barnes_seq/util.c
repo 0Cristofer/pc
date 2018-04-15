@@ -72,7 +72,7 @@ double cputime(){
    struct tms buffer;
 
    if (times(&buffer) == -1)
-      error("times() call failed\n");
+      error1("times() call failed\n");
 
    return (buffer.tms_utime / (60.0 * HZ));
 }
@@ -88,4 +88,40 @@ error(char msg, char a1, char a2, char a3, char a4) {
    if (errno != 0)
       perror("Error");
    exit(0);
+}
+
+/*
+* error1 : I am screaming
+*/
+error1(char* msg){
+
+  fprintf(stderr, msg);
+  if (errno != 0)
+     perror("Error");
+  exit(0);
+
+}
+
+/*
+* error2 : You are screaming
+*/
+error2(char msg, char a1){
+
+  fprintf(stderr, msg, a1);
+  if (errno != 0)
+     perror("Error");
+  exit(0);
+
+}
+
+/*
+* error3 : dead
+*/
+error3(char msg, char a1, char a2){
+
+  fprintf(stderr, msg, a1, a2);
+  if (errno != 0)
+     perror("Error");
+  exit(0);
+
 }
