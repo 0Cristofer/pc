@@ -171,6 +171,17 @@ main(int argc, string argv[]) {
         (Global->computeend) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
 
+    {
+      unsigned long	i, Error;
+      for (i = 0; i < (NPROC) - 1; i++) {
+        Error = pthread_join(PThreadTable[i], NULL);
+        if (Error != 0) {
+          printf("Error in pthread_join().\n");
+          exit(-1);
+        }
+      }
+    };
+
     printf("COMPUTEEND    = %12lu\n",Global->computeend);
     printf("COMPUTETIME   = %12lu\n",Global->computeend - Global->computestart);
     printf("TRACKTIME     = %12lu\n",Global->tracktime);
@@ -281,23 +292,23 @@ tab_init(){
   /*allocate leaf/cell space */
   maxleaf = (int) ((double) fleaves * nbody);
   maxcell = fcells * maxleaf;
-  for (i = 0; i < 1; ++i) {
-    Local[i].ctab = (cellptr) malloc(maxcell  * sizeof(cell));;
-    Local[i].ltab = (leafptr) malloc(maxleaf  * sizeof(leaf));;
+  for (i = 0; i < NPROC; ++i) {
+    Local[i].ctab = (cellptr) malloc((maxcell / NPROC) * sizeof(cell));;
+    Local[i].ltab = (leafptr) malloc((maxleaf / NPROC) * sizeof(leaf));;
   }
 
   /*allocate space for personal lists of body pointers */
-  maxmybody = (nbody+maxleaf*MAX_BODIES_PER_LEAF);
-  Local[0].mybodytab = (bodyptr*) malloc(maxmybody*sizeof(bodyptr));;
+  maxmybody = (nbody+maxleaf*MAX_BODIES_PER_LEAF)/NPROC;
+  Local[0].mybodytab = (bodyptr*) malloc(NPROC * maxmybody*sizeof(bodyptr));;
   /* space is allocated so that every */
   /* process can have a maximum of maxmybody pointers to bodies */
   /* then there is an array of bodies called bodytab which is  */
   /* allocated in the distribution generation or when the distr. */
   /* file is read */
-  maxmycell = maxcell;
-  maxmyleaf = maxleaf;
-  Local[0].mycelltab = (cellptr*) malloc(maxmycell*sizeof(cellptr));;
-  Local[0].myleaftab = (leafptr*) malloc(maxmyleaf*sizeof(leafptr));;
+  maxmycell = maxcell / NPROC;
+  maxmyleaf = maxleaf / NPROC;
+  Local[0].mycelltab = (cellptr*) malloc(NPROC * maxmycell*sizeof(cellptr));;
+  Local[0].myleaftab = (leafptr*) malloc(NPROC * maxmyleaf*sizeof(leafptr));;
 
   CellSem = (struct CellSemType *) malloc(sizeof(struct CellSemType));;
 
@@ -541,28 +552,28 @@ void stepsystem (unsigned int ProcessId){
     int		i, Cancel, Temp;
 
     //IMPLEMENTAÇÃO SEMAFOROS
-    sem_wait(&(Global->Barstart).sem_count);
+    sem_wait(&(Global->Barcom).sem_count);
 
-    if((Global->Barstart).counter == (NPROC - 1)){
+    if((Global->Barcom).counter == (NPROC - 1)){
       /* Se entrou é a ultima thread */
-      (Global->Barstart).counter = 0;
-      printf("Oi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
+      (Global->Barcom).counter = 0;
+      //printf("Barcom\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
 
-      sem_post(&(Global->Barstart).sem_count);
+      sem_post(&(Global->Barcom).sem_count);
 
       /* Libera todas as threads*/
       for (i = 0; i < (NPROC - 1); i++) {
-        sem_post(&(Global->Barstart).sem_bar);
+        sem_post(&(Global->Barcom).sem_bar);
       }
 
       } else {
 
         /* NÃO é a ultima thread, então será bloqueada na barreira */
-        printf("Oi eu sou a thread %d e não sou a ultima :)\n", ProcessId );
-        (Global->Barstart).counter++;
-        sem_post(&(Global->Barstart).sem_count);
+        //printf("Barcom\tOi eu sou a thread %d e não sou a ultima :)\n", ProcessId );
+        (Global->Barcom).counter++;
+        sem_post(&(Global->Barcom).sem_count);
 
-        sem_wait(&(Global->Barstart).sem_bar);
+        sem_wait(&(Global->Barcom).sem_bar);
       }
   };
 
@@ -589,9 +600,9 @@ void stepsystem (unsigned int ProcessId){
 
   Housekeep(ProcessId);
 
-  Cavg = (real) Cost(Global->G_root) / (real)1 ;
+  Cavg = (real) Cost(Global->G_root) / (real)NPROC ;
   Local[ProcessId].workMin = (int) (Cavg * ProcessId);
-  Local[ProcessId].workMax = (int) (Cavg * (ProcessId + 1) + (ProcessId == (1 - 1)));
+  Local[ProcessId].workMax = (int) (Cavg * (ProcessId + 1) + (ProcessId == (NPROC - 1)));
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
     {
@@ -683,7 +694,7 @@ void stepsystem (unsigned int ProcessId){
 
       if((Global->Barpos).counter == (NPROC - 1)){
         /* Se entrou é a ultima thread */
-        printf("Oi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
+        //printf("Barpos\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
         (Global->Barpos).counter = 0;
 
         sem_post(&(Global->Barpos).sem_count);
@@ -695,7 +706,7 @@ void stepsystem (unsigned int ProcessId){
 
         } else {
         /* NÃO é a ultima thread, então será bloqueada na barreira */
-        printf("Oi eu sou a thread %d e não sou a ultimaaa :)\n", ProcessId );
+        //printf("Barpos\tOi eu sou a thread %d e não sou a ultimaaa :)\n", ProcessId );
         (Global->Barpos).counter++;
         sem_post(&(Global->Barpos).sem_count);
 
@@ -764,8 +775,8 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
   int equalbodies;
   int extra,offset,i;
 
-  Local[ProcessId].mynbody = nbody / 1;
-  extra = nbody % 1;
+  Local[ProcessId].mynbody = nbody / NPROC;
+  extra = nbody % NPROC;
   if (ProcessId < extra) {
     Local[ProcessId].mynbody++;
     offset = Local[ProcessId].mynbody * ProcessId;
@@ -789,7 +800,7 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
 
     if((Global->Barstart).counter == (NPROC - 1)){
       /* Se entrou é a ultima thread */
-      printf("Oi eu sou a thread %d OMG!!! eu sou a ultimaaa!!! :o\n\n\n", ProcessId );
+      //printf("Barstart1\tOi eu sou a thread %d OMG!!! eu sou a ultimaaa!!! :o\n\n\n", ProcessId );
       (Global->Barstart).counter = 0;
 
       sem_post(&(Global->Barstart).sem_count);
@@ -800,9 +811,9 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
       }
 
     } else {
-      /* NÃO é a ultima thread, então será bloqueada na barreira */
-      printf("Oi eu sou a thread %d e não sou a ultimaaa :)\n", ProcessId );
 
+      /* NÃO é a ultima thread, então será bloqueada na barreira */
+      //printf("Barstart1\tOi eu sou a thread %d e não sou a ultimaaa :)\n", ProcessId );
       (Global->Barstart).counter++;
       sem_post(&(Global->Barstart).sem_count);
 

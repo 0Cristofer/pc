@@ -78,6 +78,7 @@ maketree(unsigned ProcessId){
 	    if((Global->Bartree).counter == (NPROC - 1)){
 	      /* Se entrou é a ultima thread */
 	      (Global->Bartree).counter = 0;
+				//printf("Bartree\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
 
 	      sem_post(&(Global->Bartree).sem_count);
 
@@ -88,7 +89,7 @@ maketree(unsigned ProcessId){
 
 	      } else {
 	      /* NÃO é a ultima thread, então será bloqueada na barreira */
-
+				//printf("Bartree\tOi eu sou a thread %d e não sou a ultima :)\n", ProcessId );
 	      (Global->Bartree).counter++;
 	      sem_post(&(Global->Bartree).sem_count);
 
