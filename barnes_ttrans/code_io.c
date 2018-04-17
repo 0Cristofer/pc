@@ -107,55 +107,29 @@ void output (unsigned int ProcessId){
   diagnostics(ProcessId);
 
   if (Local[ProcessId].mymtot!=0) {
-    {pthread_mutex_lock(&(Global->CountLock));};
-    Global->n2bcalc += Local[ProcessId].myn2bcalc;
-    Global->nbccalc += Local[ProcessId].mynbccalc;
-    Global->selfint += Local[ProcessId].myselfint;
-    ADDM(Global->keten, Global-> keten, Local[ProcessId].myketen);
-    ADDM(Global->peten, Global-> peten, Local[ProcessId].mypeten);
-    for (k=0;k<3;k++) Global->etot[k] +=  Local[ProcessId].myetot[k];
-    ADDV(Global->amvec, Global-> amvec, Local[ProcessId].myamvec);
+    __transaction_atomic{
+      Global->n2bcalc += Local[ProcessId].myn2bcalc;
+      Global->nbccalc += Local[ProcessId].mynbccalc;
+      Global->selfint += Local[ProcessId].myselfint;
+      ADDM(Global->keten, Global-> keten, Local[ProcessId].myketen);
+      ADDM(Global->peten, Global-> peten, Local[ProcessId].mypeten);
+      for (k=0;k<3;k++) Global->etot[k] +=  Local[ProcessId].myetot[k];
+      ADDV(Global->amvec, Global-> amvec, Local[ProcessId].myamvec);
 
-    MULVS(tempv1, Global->cmphase[0],Global->mtot);
-    MULVS(tempv2, Local[ProcessId].mycmphase[0], Local[ProcessId].mymtot);
-    ADDV(tempv1, tempv1, tempv2);
-    DIVVS(Global->cmphase[0], tempv1, Global->mtot+Local[ProcessId].mymtot);
+      MULVS(tempv1, Global->cmphase[0],Global->mtot);
+      MULVS(tempv2, Local[ProcessId].mycmphase[0], Local[ProcessId].mymtot);
+      ADDV(tempv1, tempv1, tempv2);
+      DIVVS(Global->cmphase[0], tempv1, Global->mtot+Local[ProcessId].mymtot);
 
-    MULVS(tempv1, Global->cmphase[1],Global->mtot);
-    MULVS(tempv2, Local[ProcessId].mycmphase[1], Local[ProcessId].mymtot);
-    ADDV(tempv1, tempv1, tempv2);
-    DIVVS(Global->cmphase[1], tempv1, Global->mtot+Local[ProcessId].mymtot);
-    Global->mtot +=Local[ProcessId].mymtot;
-    {pthread_mutex_unlock(&(Global->CountLock));};
+      MULVS(tempv1, Global->cmphase[1],Global->mtot);
+      MULVS(tempv2, Local[ProcessId].mycmphase[1], Local[ProcessId].mymtot);
+      ADDV(tempv1, tempv1, tempv2);
+      DIVVS(Global->cmphase[1], tempv1, Global->mtot+Local[ProcessId].mymtot);
+      Global->mtot +=Local[ProcessId].mymtot;
+    }
   }
 
-  {
-    unsigned long	Error, Cycle;
-    int		Cancel, Temp;
-
-    Error = pthread_mutex_lock(&(Global->Baraccel).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
-
-    Cycle = (Global->Baraccel).cycle;
-    if (++(Global->Baraccel).counter != (NPROC)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-      while (Cycle == (Global->Baraccel).cycle) {
-        Error = pthread_cond_wait(&(Global->Baraccel).cv, &(Global->Baraccel).mutex);
-        if (Error != 0) {
-          break;
-        }
-      }
-      pthread_setcancelstate(Cancel, &Temp);
-    } else {
-      (Global->Baraccel).cycle = !(Global->Baraccel).cycle;
-      (Global->Baraccel).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Baraccel).cv);
-    }
-    pthread_mutex_unlock(&(Global->Baraccel).mutex);
-  };
+  pthread_barrier_wait(&(Global->Baraccel));
 
   if (ProcessId==0) {
     nttot = Global->n2bcalc + Global->nbccalc;

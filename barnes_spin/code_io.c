@@ -107,7 +107,7 @@ void output (unsigned int ProcessId){
   diagnostics(ProcessId);
 
   if (Local[ProcessId].mymtot!=0) {
-    {pthread_mutex_lock(&(Global->CountLock));};
+    {pthread_spin_lock(&(Global->CountLock));};
     Global->n2bcalc += Local[ProcessId].myn2bcalc;
     Global->nbccalc += Local[ProcessId].mynbccalc;
     Global->selfint += Local[ProcessId].myselfint;
@@ -126,36 +126,10 @@ void output (unsigned int ProcessId){
     ADDV(tempv1, tempv1, tempv2);
     DIVVS(Global->cmphase[1], tempv1, Global->mtot+Local[ProcessId].mymtot);
     Global->mtot +=Local[ProcessId].mymtot;
-    {pthread_mutex_unlock(&(Global->CountLock));};
+    {pthread_spin_unlock(&(Global->CountLock));};
   }
 
-  {
-    unsigned long	Error, Cycle;
-    int		Cancel, Temp;
-
-    Error = pthread_mutex_lock(&(Global->Baraccel).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
-
-    Cycle = (Global->Baraccel).cycle;
-    if (++(Global->Baraccel).counter != (NPROC)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-      while (Cycle == (Global->Baraccel).cycle) {
-        Error = pthread_cond_wait(&(Global->Baraccel).cv, &(Global->Baraccel).mutex);
-        if (Error != 0) {
-          break;
-        }
-      }
-      pthread_setcancelstate(Cancel, &Temp);
-    } else {
-      (Global->Baraccel).cycle = !(Global->Baraccel).cycle;
-      (Global->Baraccel).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Baraccel).cv);
-    }
-    pthread_mutex_unlock(&(Global->Baraccel).mutex);
-  };
+  pthread_barrier_wait(&(Global->Baraccel));
 
   if (ProcessId==0) {
     nttot = Global->n2bcalc + Global->nbccalc;

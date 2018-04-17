@@ -129,9 +129,11 @@ main(int argc, string argv[]) {
     }
    }
 
-   ANLinit();
+   Global = (struct GlobalMemory *) malloc(sizeof(struct GlobalMemory));;
+   if (Global==NULL) error1("No initialization for Global\n");
    initparam(argv, defv);
    startrun();
+   ANLinit();
    initoutput();
    tab_init();
 
@@ -145,6 +147,12 @@ main(int argc, string argv[]) {
    Global->current_id = 0;
    //for(ProcessId = 1; ProcessId < NPROC; ProcessId++) {
 
+   /* Make the master do slave work so we don't waste the processor */
+   {
+     struct timeval	FullTime;
+     gettimeofday(&FullTime, NULL);
+     (Global->computestart) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
+   };
    {
      long	i, Error;
      for (i = 0; i < (NPROC) - 1; i++) {
@@ -159,13 +167,6 @@ main(int argc, string argv[]) {
    };
 
    //}
-
-   /* Make the master do slave work so we don't waste the processor */
-   {
-     struct timeval	FullTime;
-     gettimeofday(&FullTime, NULL);
-     (Global->computestart) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
-   };
 
    printf("COMPUTESTART  = %12lu\n",Global->computestart);
    //SlaveStart();
@@ -210,131 +211,75 @@ main(int argc, string argv[]) {
  */
 ANLinit(){
    /* Allocate global, shared memory */
-   Global = (struct GlobalMemory *) malloc(sizeof(struct GlobalMemory));;
-   if (Global==NULL) error1("No initialization for Global\n");
+
 
    {
      unsigned long	Error;
-     Error = pthread_mutex_init(&(Global->Barload).mutex, NULL);
+     printf("proc: %ld\n", NPROC);
+
+     Error = pthread_barrier_init(&(Global->Barload), NULL, NPROC);
      if (Error != 0) {
-       printf("Error while initializing barrier.\n");
+       printf("Error while initializing barrier load.\n");
+       printf("Error: %ld\n", Error);
        exit(-1);
      }
-
-     Error = pthread_cond_init(&(Global->Barload).cv, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Barload).mutex);
-       exit(-1);
-     }
-
-     (Global->Barload).counter = 0;
-     (Global->Barload).cycle = 0;
-   };
-
-   {
-     unsigned long	Error;
-     Error = pthread_mutex_init(&(Global->Bartree).mutex, NULL);
-
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       exit(-1);
-     }
-
-     Error = pthread_cond_init(&(Global->Bartree).cv, NULL);
-
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Bartree).mutex);
-       exit(-1);
-     }
-
-     (Global->Bartree).counter = 0;
-     (Global->Bartree).cycle = 0;
    };
 
    {
      unsigned long	Error;
 
-     Error = pthread_mutex_init(&(Global->Barcom).mutex, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       exit(-1);
-     }
-
-     Error = pthread_cond_init(&(Global->Barcom).cv, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Barcom).mutex);
-       exit(-1);
-     }
-
-     (Global->Barcom).counter = 0;
-     (Global->Barcom).cycle = 0;
-   };
-
-   {
-     unsigned long	Error;
-     Error = pthread_mutex_init(&(Global->Baraccel).mutex, NULL);
+     Error = pthread_barrier_init(&(Global->Bartree), NULL, NPROC);
 
      if (Error != 0) {
-       printf("Error while initializing barrier.\n");
+       printf("Error while initializing barrier tree.\n");
+       printf("Error: %ld\n", Error);
        exit(-1);
      }
-
-     Error = pthread_cond_init(&(Global->Baraccel).cv, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Baraccel).mutex);
-       exit(-1);
-     }
-
-     (Global->Baraccel).counter = 0;
-     (Global->Baraccel).cycle = 0;
    };
 
    {
      unsigned long	Error;
 
-     Error = pthread_mutex_init(&(Global->Barstart).mutex, NULL);
+     Error = pthread_barrier_init(&(Global->Barcom), NULL, NPROC);
      if (Error != 0) {
-       printf("Error while initializing barrier.\n");
+       printf("Error while initializing barrier com.\n");
+       printf("Error: %ld\n", Error);
        exit(-1);
      }
-
-     Error = pthread_cond_init(&(Global->Barstart).cv, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Barstart).mutex);
-       exit(-1);
-     }
-
-     (Global->Barstart).counter = 0;
-     (Global->Barstart).cycle = 0;
    };
 
    {
      unsigned long	Error;
-     Error = pthread_mutex_init(&(Global->Barpos).mutex, NULL);
 
+     Error = pthread_barrier_init(&(Global->Baraccel), NULL, NPROC);
      if (Error != 0) {
-       printf("Error while initializing barrier.\n");
+       printf("Error while initializing barrier accel.\n");
+       printf("Error: %ld\n", Error);
        exit(-1);
      }
-
-     Error = pthread_cond_init(&(Global->Barpos).cv, NULL);
-     if (Error != 0) {
-       printf("Error while initializing barrier.\n");
-       pthread_mutex_destroy(&(Global->Barpos).mutex);
-       exit(-1);
-     }
-
-     (Global->Barpos).counter = 0;
-     (Global->Barpos).cycle = 0;
    };
 
-   {pthread_mutex_init(&(Global->CountLock), NULL);};
-   {pthread_mutex_init(&(Global->io_lock), NULL);};
+   {
+     unsigned long	Error;
+
+     Error = pthread_barrier_init(&(Global->Barstart), NULL, NPROC);
+     if (Error != 0) {
+       printf("Error while initializing barrier start.\n");
+       printf("Error: %ld\n", Error);
+       exit(-1);
+     }
+   };
+
+   {
+     unsigned long	Error;
+
+     Error = pthread_barrier_init(&(Global->Barpos), NULL, NPROC);
+     if (Error != 0) {
+       printf("Error while initializing barrier pos.\n");
+       printf("Error: %ld\n", Error);
+       exit(-1);
+     }
+   };
  }
 
 /*
@@ -401,18 +346,7 @@ tab_init(){
   Local[0].mycelltab = (cellptr*) malloc(NPROC*maxmycell*sizeof(cellptr));;
   Local[0].myleaftab = (leafptr*) malloc(NPROC*maxmyleaf*sizeof(leafptr));;
 
-  CellLock = (struct CellLockType *) malloc(sizeof(struct CellLockType));;
 
-  {
-    unsigned long	i, Error;
-    for (i = 0; i < MAXLOCK; i++) {
-      Error = pthread_mutex_init(&CellLock->CL[i], NULL);
-      if (Error != 0) {
-        printf("Error while initializing array of locks.\n");
-        exit(-1);
-      }
-    }
-  };
 }
 
 /*
@@ -422,9 +356,10 @@ void SlaveStart(){
    unsigned int ProcessId;
 
    /* Get unique ProcessId */
-   {pthread_mutex_lock(&(Global->CountLock));};
-   ProcessId = Global->current_id++;
-   {pthread_mutex_unlock(&(Global->CountLock));};
+   __transaction_atomic{
+     ProcessId = Global->current_id++;
+   }
+
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
@@ -638,33 +573,7 @@ void stepsystem (unsigned int ProcessId){
   }
 
   /* start at same time */
-  {
-    unsigned long	Error, Cycle;
-    int		Cancel, Temp;
-
-    Error = pthread_mutex_lock(&(Global->Barstart).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
-
-    Cycle = (Global->Barstart).cycle;
-    if (++(Global->Barstart).counter != (NPROC)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-      while (Cycle == (Global->Barstart).cycle) {
-        Error = pthread_cond_wait(&(Global->Barstart).cv, &(Global->Barstart).mutex);
-        if (Error != 0) {
-          break;
-        }
-      }
-      pthread_setcancelstate(Cancel, &Temp);
-    } else {
-      (Global->Barstart).cycle = !(Global->Barstart).cycle;
-      (Global->Barstart).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Barstart).cv);
-    }
-    pthread_mutex_unlock(&(Global->Barstart).mutex);
-  };
+  pthread_barrier_wait(&(Global->Barstart));
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
     {
@@ -755,49 +664,23 @@ void stepsystem (unsigned int ProcessId){
         }
       }
     }
-    {pthread_mutex_lock(&(Global->CountLock));};
-    for (i = 0; i < NDIM; i++) {
-      if (Global->min[i] > Local[ProcessId].min[i]) {
-        Global->min[i] = Local[ProcessId].min[i];
-      }
-      if (Global->max[i] < Local[ProcessId].max[i]) {
-        Global->max[i] = Local[ProcessId].max[i];
+    __transaction_atomic{
+
+      for (i = 0; i < NDIM; i++) {
+        if (Global->min[i] > Local[ProcessId].min[i]) {
+          Global->min[i] = Local[ProcessId].min[i];
+        }
+        if (Global->max[i] < Local[ProcessId].max[i]) {
+          Global->max[i] = Local[ProcessId].max[i];
+        }
       }
     }
-    {pthread_mutex_unlock(&(Global->CountLock));};
-
 
     /* bar needed to make sure that every process has computed its min */
     /* and max coordinates, and has accumulated them into the global   */
     /* min and max, before the new dimensions are computed	       */
 
-    {
-      unsigned long	Error, Cycle;
-      int		Cancel, Temp;
-
-      Error = pthread_mutex_lock(&(Global->Barpos).mutex);
-      if (Error != 0) {
-        printf("Error while trying to get lock in barrier.\n");
-        exit(-1);
-      }
-
-      Cycle = (Global->Barpos).cycle;
-      if (++(Global->Barpos).counter != (NPROC)) {
-        pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-        while (Cycle == (Global->Barpos).cycle) {
-          Error = pthread_cond_wait(&(Global->Barpos).cv, &(Global->Barpos).mutex);
-          if (Error != 0) {
-            break;
-          }
-        }
-        pthread_setcancelstate(Cancel, &Temp);
-      } else {
-        (Global->Barpos).cycle = !(Global->Barpos).cycle;
-        (Global->Barpos).counter = 0;
-        Error = pthread_cond_broadcast(&(Global->Barpos).cv);
-      }
-      pthread_mutex_unlock(&(Global->Barpos).mutex);
-    };
+    pthread_barrier_wait(&(Global->Barpos));
 
     if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
       {
@@ -877,32 +760,7 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
   for (i=0; i < Local[ProcessId].mynbody; i++) {
     Local[ProcessId].mybodytab[i] = &(btab[offset+i]);
   }
-  {
-    unsigned long	Error, Cycle;
-    int		Cancel, Temp;
-
-    Error = pthread_mutex_lock(&(Global->Barstart).mutex);
-    if (Error != 0) {
-      printf("Error while trying to get lock in barrier.\n");
-      exit(-1);
-    }
-    Cycle = (Global->Barstart).cycle;
-    if (++(Global->Barstart).counter != (NPROC)) {
-      pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-      while (Cycle == (Global->Barstart).cycle) {
-        Error = pthread_cond_wait(&(Global->Barstart).cv, &(Global->Barstart).mutex);
-        if (Error != 0) {
-          break;
-        }
-      }
-      pthread_setcancelstate(Cancel, &Temp);
-    } else {
-      (Global->Barstart).cycle = !(Global->Barstart).cycle;
-      (Global->Barstart).counter = 0;
-      Error = pthread_cond_broadcast(&(Global->Barstart).cv);
-    }
-    pthread_mutex_unlock(&(Global->Barstart).mutex);
-  };
+  pthread_barrier_wait(&(Global->Barstart));
 }
 
 void find_my_bodies(nodeptr mycell, int work, int direction, unsigned ProcessId){
