@@ -6,16 +6,25 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#define TRUE 1
+#define FALSE 0
+
 /* Estruturas */
 typedef struct LLNode {
     int val;
     struct LLNode *next;
 } LLNode;
 
-/* Dados globais */
-static int n;
-
 LLNode* sentinela;
+
+/* Dados globais com valores padrão */
+static int datasetsize = 256;                  // number of items
+static int duration = 1;                       // in seconds
+static int doWarmup = FALSE;
+
+// these three are for getting various lookup/insert/remove ratios
+static float lookupPct = 0.34f;
+static float insertPct = 0.67f;
 
 /* Exibe ajuda e finaliza o programa */
 void help(int msg){
@@ -32,7 +41,10 @@ void help(int msg){
       break;
   }
 
-	printf("\nLinked List - versão sequencial\n\tn : Numero de operações a serem executadas\n\th : Mostra essa mensagem\n\n");
+	printf("\n\ts : Tamanho do datasetsize [256]");
+  printf("\n\tt : Tempo de duração da execução (segundos) [1]");
+  printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
+  printf("\n\th : Mostra essa mensagem\n\n");
 	exit(1);
 }
 
@@ -41,20 +53,25 @@ void getArgs(int argc, char *argv[]){
 	extern char *optarg;
 	char op;
 
-	if(argc < 2){
-
-		help(1);
-	}
-
 	struct option longopts[] = {
-    {"numero", 1, NULL, 'n'}
+    {"size", 1, NULL, 's'},
+    {"time", 1, NULL, 't'},
+    {"warmup", 0, NULL, 'w'}
 	};
 
-	while ((op = getopt_long(argc, argv, "n:h", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "s:t:wh", longopts, NULL)) != -1) {
 		switch (op) {
-			case 'n':
-				n = atoi(optarg);
+			case 's':
+				datasetsize = atoi(optarg);
 				break;
+
+      case 't':
+        duration = atoi(optarg);
+        break;
+
+      case 'w':
+        doWarmup = TRUE;
+        break;
 
       case 'h':
         help(0);
@@ -69,10 +86,15 @@ void getArgs(int argc, char *argv[]){
 
 /* Checa se os parametros são validos, aborta caso não sejam */
 void checkData(){
-	if (n < 1){
-		printf("Numero de operações inválido. Abortando...\n");
+	if (datasetsize < 1){
+		printf("Tamanho da lista inválida. Abortando...\n");
 		exit(1);
 	}
+
+  if(duration <=0){
+    printf("Tempo de execução inválido. Abortando...\n");
+    exit(1);
+  }
 }
 
 // insert method; find the right place in the list, add val so that it is in
@@ -169,29 +191,73 @@ void printLista(){
         curr = (curr->next);
     }
 
-    printf(" NULL\n");
+    printf(" NULL\n\n");
 }
+
+void printInfo(){
+  printf("\nDuração = %d segundos", duration);
+  printf("\nTamanho máximo da fila = %d nodes", datasetsize);
+  printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
+            lookupPct, insertPct - lookupPct, 1.0f - insertPct);
+
+  if(doWarmup)
+    printf("\nWarm Up: ativado");
+  else
+    printf("\nWarm Up: desativado");
+
+  printf("\nIniciando o experimento...\n\n");
+}
+
+/*
+void* experiment(void* arg){
+    int tid = (int*) arg;
+
+    float action = rand
+
+    if (action < BMCONFIG.lookupPct) {
+        TX_FUNC(result, SET->template lookup, val);
+        if (result)
+            ++args->count[TXN_LOOKUP_TRUE];
+        else
+            ++args->count[TXN_LOOKUP_FALSE];
+    }
+    else if (action < BMCONFIG.insertPct) {
+        TX_CALL(SET->template insert, val);
+        ++args->count[TXN_INSERT];
+    }
+    else {
+        TX_CALL(SET->template remove, val);
+        ++args->count[TXN_REMOVE];
+    }
+
+    bool sanity_check() const { return SET->isSane(); }
+}
+*/
 
 int main(int argc, char const *argv[]) {
   int i;
-  printf("Iniciando execução...\n");
+  printf("\nLinked List - versão sequencial\n");
 
 	getArgs(argc, argv);
 	checkData();
+  printInfo();
 
   /* Inicializa a lista criando a sentinela */
   sentinela = malloc(sizeof(LLNode));
   sentinela->next = NULL;
 
+  /* Warm Up */
+  // warmup inserts half of the elements in the datasetsize
+  if(doWarmup){
+      for (i = 0; i < datasetsize; i+=2) {
+        insert(i);
+      }
+  }
+
   /* TODO implementar mecanismo que aleatoriza as operações? */
-  /* for 1 -> n : pthread_create? */
+  /* for 1 -> datasetsize : pthread_create? */
   /* rand(x) -> switch(x): case  1: insert | case 2: remove? */
   /* barreiras ? */
-
-  /* Teste */
-  for(i = 1; i <= n; i++){
-    insert(i);
-  }
 
   printLista();
   removeNode(3);
