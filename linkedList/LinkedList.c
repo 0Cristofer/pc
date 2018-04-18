@@ -5,22 +5,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <time.h>
 
 #define TRUE 1
 #define FALSE 0
 
 /* Estruturas */
+typedef struct pthread_arg{
+  int in;
+  int out;
+}pthread_arg;
+
 typedef struct LLNode {
     int val;
     struct LLNode *next;
 } LLNode;
 
 LLNode* sentinela;
+static int lookups_true = 0;
+static int lookups_false = 0;
+static int inserts = 0;
+static int removes = 0;
 
 /* Dados globais com valores padrão */
 static int datasetsize = 256;                  // number of items
-static int duration = 1;                       // in seconds
+static int duration = 5;                       // in seconds
 static int doWarmup = FALSE;
+static int num_ops = 0;                        // number of operations mode value.
 
 // these three are for getting various lookup/insert/remove ratios
 static float lookupPct = 0.34f;
@@ -44,6 +55,7 @@ void help(int msg){
 	printf("\n\ts : Tamanho do datasetsize [256]");
   printf("\n\tt : Tempo de duração da execução (segundos) [1]");
   printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
+  printf("\n\tx : Muda para o modo de execução por número de operações.");
   printf("\n\th : Mostra essa mensagem\n\n");
 	exit(1);
 }
@@ -56,10 +68,11 @@ void getArgs(int argc, char *argv[]){
 	struct option longopts[] = {
     {"size", 1, NULL, 's'},
     {"time", 1, NULL, 't'},
-    {"warmup", 0, NULL, 'w'}
+    {"warmup", 0, NULL, 'w'},
+    {"x", 1, NULL, 'x'}
 	};
 
-	while ((op = getopt_long(argc, argv, "s:t:wh", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "s:t:wx:h", longopts, NULL)) != -1) {
 		switch (op) {
 			case 's':
 				datasetsize = atoi(optarg);
@@ -71,6 +84,10 @@ void getArgs(int argc, char *argv[]){
 
       case 'w':
         doWarmup = TRUE;
+        break;
+
+      case 'x':
+        num_ops = atoi(optarg);
         break;
 
       case 'h':
@@ -95,7 +112,31 @@ void checkData(){
     printf("Tempo de execução inválido. Abortando...\n");
     exit(1);
   }
+
+  if(num_ops < 0){
+    printf("Modo Número de operações: Valor inválido. Abortando...\n");
+    exit(1);
+  }
 }
+
+/* Sanity Check */
+int isSane(){
+    int sane = TRUE;
+    const LLNode* prev = sentinela;
+    const LLNode* curr = prev->next;
+
+    while (curr != NULL) {
+        if ((prev->val) >= (curr->val)) {
+            printf("FAILED SANITY CHECK IN: %d < %d\n", prev->val, curr->val );
+            sane = FALSE;
+            break;
+        }
+        prev = curr;
+        curr = (curr->next);
+    }
+    return sane;
+}
+
 
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
@@ -124,6 +165,28 @@ void insert(int val){
     insert_point->next = novo;
     // FIM
     }
+}
+
+// search function
+void lookup(void* arg){
+  pthread_arg* p = (pthread_arg*) arg;
+  int val = p->in;
+
+  int found = FALSE;
+
+  const LLNode* curr = sentinela;
+  curr = curr->next;
+
+  while (curr != NULL) {
+    if (curr->val >= val)
+      break;
+
+    curr = curr->next;
+  }
+
+  found = ((curr != NULL) && (curr->val == val));
+
+  p->out = found;
 }
 
 // findmax function
@@ -208,31 +271,42 @@ void printInfo(){
   printf("\nIniciando o experimento...\n\n");
 }
 
-/*
-void* experiment(void* arg){
-    int tid = (int*) arg;
+void experiment(){
+    //int tid = (int*) arg;
+    int result;
 
-    float action = rand
+    pthread_arg* p = malloc(sizeof(pthread_arg));
 
-    if (action < BMCONFIG.lookupPct) {
-        TX_FUNC(result, SET->template lookup, val);
-        if (result)
-            ++args->count[TXN_LOOKUP_TRUE];
-        else
-            ++args->count[TXN_LOOKUP_FALSE];
+    float action = (rand()%100) / 100.0;
+    int val = rand()%1000;
+
+    printf("\nAction = %f | val = %d\n", action, val);
+
+    if (action < lookupPct) {
+      printf("Lookup\n");
+
+      p->in = val;
+      lookup(p);
+      result = p->out;
+
+      if (result)
+        lookups_true++;
+      else
+        lookups_false++;
     }
-    else if (action < BMCONFIG.insertPct) {
-        TX_CALL(SET->template insert, val);
-        ++args->count[TXN_INSERT];
+    else if (action < insertPct) {
+      printf("Insert\n");
+      insert(val);
+      inserts++;
     }
     else {
-        TX_CALL(SET->template remove, val);
-        ++args->count[TXN_REMOVE];
+        printf("Remove\n");
+        removeNode(val);
+        removes++;
     }
 
-    bool sanity_check() const { return SET->isSane(); }
+    int sane = isSane();
 }
-*/
 
 int main(int argc, char const *argv[]) {
   int i;
@@ -244,6 +318,7 @@ int main(int argc, char const *argv[]) {
 
   /* Inicializa a lista criando a sentinela */
   sentinela = malloc(sizeof(LLNode));
+  sentinela->val = -1;
   sentinela->next = NULL;
 
   /* Warm Up */
@@ -259,9 +334,25 @@ int main(int argc, char const *argv[]) {
   /* rand(x) -> switch(x): case  1: insert | case 2: remove? */
   /* barreiras ? */
 
+  srand (time(NULL));
+
+  for(i = 0; i < num_ops; i++){
+    experiment();
+  }
+
+
   printLista();
-  removeNode(3);
-  printLista();
+  printf("\nSanity Check: ");
+  if(isSane())
+    printf("Passed\n");
+  else
+    printf("Failed! Isn't sane!\n");
+
+  printf("FIM DA EXECUÇÃO.\n");
+  printf("Total de lookups acertados: %d\n", lookups_true);
+  printf("Total de lookups falhados: %d\n", lookups_false);
+  printf("Total de Inserts: %d\n", inserts);
+  printf("Total de removes: %d\n", removes);
 
   return 0;
 }
