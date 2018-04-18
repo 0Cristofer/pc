@@ -60,70 +60,18 @@ maketree(unsigned ProcessId){
 				ProcessId);
 			}
 			else {
-				{pthread_mutex_lock(&(Global->io_lock));};
+				{pthread_spin_lock(&(Global->io_lock));};
 				fprintf(stderr, "Process %d found body %d to have zero mass\n",
 				ProcessId, (int) p);
-				{pthread_mutex_unlock(&(Global->io_lock));};
+				{pthread_spin_unlock(&(Global->io_lock));};
 			}
 		}
 
-		{
-			unsigned long	Error, Cycle;
-			int		Cancel, Temp;
-
-			Error = pthread_mutex_lock(&(Global->Bartree).mutex);
-			if (Error != 0) {
-				printf("Error while trying to get lock in barrier.\n");
-				exit(-1);
-			}
-
-			Cycle = (Global->Bartree).cycle;
-			if (++(Global->Bartree).counter != (NPROC)) {
-				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-				while (Cycle == (Global->Bartree).cycle) {
-					Error = pthread_cond_wait(&(Global->Bartree).cv, &(Global->Bartree).mutex);
-					if (Error != 0) {
-						break;
-					}
-				}
-				pthread_setcancelstate(Cancel, &Temp);
-			} else {
-				(Global->Bartree).cycle = !(Global->Bartree).cycle;
-				(Global->Bartree).counter = 0;
-				Error = pthread_cond_broadcast(&(Global->Bartree).cv);
-			}
-			pthread_mutex_unlock(&(Global->Bartree).mutex);
-		};
+		pthread_barrier_wait(&(Global->Bartree));
 
 		hackcofm( 0, ProcessId );
 
-		{
-			unsigned long	Error, Cycle;
-			int		Cancel, Temp;
-
-			Error = pthread_mutex_lock(&(Global->Barcom).mutex);
-			if (Error != 0) {
-				printf("Error while trying to get lock in barrier.\n");
-				exit(-1);
-			}
-
-			Cycle = (Global->Barcom).cycle;
-			if (++(Global->Barcom).counter != (NPROC)) {
-				pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &Cancel);
-				while (Cycle == (Global->Barcom).cycle) {
-					Error = pthread_cond_wait(&(Global->Barcom).cv, &(Global->Barcom).mutex);
-					if (Error != 0) {
-						break;
-					}
-				}
-				pthread_setcancelstate(Cancel, &Temp);
-			} else {
-				(Global->Barcom).cycle = !(Global->Barcom).cycle;
-				(Global->Barcom).counter = 0;
-				Error = pthread_cond_broadcast(&(Global->Barcom).cv);
-			}
-			pthread_mutex_unlock(&(Global->Barcom).mutex);
-		};
+		pthread_barrier_wait(&(Global->Barcom));
 	}
 
 cellptr InitCell(cellptr parent, unsigned ProcessId){
@@ -302,7 +250,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 
 		if (*qptr == NULL) {
 			/* lock the parent cell */
-			{pthread_mutex_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			{pthread_spin_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
 			if (*qptr == NULL) {
 				le = InitLeaf((cellptr) mynode, ProcessId);
 				Parent(p) = (nodeptr) le;
@@ -314,13 +262,13 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				flag = FALSE;
 			}
 
-			{pthread_mutex_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			{pthread_spin_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
 			/* unlock the parent cell */
 		}
 
 		if (flag && *qptr && (Type(*qptr) == LEAF)) {
 			/*   reached a "leaf"?      */
-			{pthread_mutex_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			{pthread_spin_lock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
 
 			/* lock the parent cell */
 			if (Type(*qptr) == LEAF){             /* still a "leaf"?      */
@@ -337,7 +285,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 			}
 
 			/* unlock the node           */
-			{pthread_mutex_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
+			{pthread_spin_unlock(&CellLock->CL[((cellptr) mynode)->seqnum % MAXLOCK]);};
 		}
 
 		if (flag) {
