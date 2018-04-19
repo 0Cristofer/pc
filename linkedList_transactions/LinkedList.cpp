@@ -234,7 +234,7 @@ int LinkedList::findmin() const
     return min;
 }
 
-/* OLD remove a node if its value == val
+//OLD remove a node if its value == val
 TX_DECL
 void LinkedList::remove(int val)
 {
@@ -262,7 +262,7 @@ void LinkedList::remove(int val)
         }
     }
 }
-*/
+
 
 // remove a node if its value == val
 void LinkedList::remove(int val)

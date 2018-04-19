@@ -23,6 +23,10 @@ typedef struct LLNode {
 } LLNode;
 
 LLNode* sentinela;
+LLNode* novo;
+
+pthread_barrier_t barrier;
+
 static int lookups_true = 0;
 static int lookups_false = 0;
 static int inserts = 0;
@@ -37,8 +41,8 @@ static int count_ops = 0;
 static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
-static float lookupPct = 0.34f;
-static float insertPct = 0.67f;
+static int lookupPct = 34;
+static int insertPct = 67;
 
 // Controla o tempo de execução
 struct timespec tstart, tend;
@@ -116,6 +120,20 @@ void getArgs(int argc, char *argv[]){
     }
 }
 
+// print the list
+void printLista(){
+    const LLNode* curr = sentinela;
+    curr = (curr->next);
+
+    printf("lista :");
+    while (curr != NULL){
+        printf(" %d ->", curr->val);
+        curr = (curr->next);
+    }
+
+    printf(" NULL\n\n");
+}
+
 /* Sanity Check */
 int isSane(){
     int sane = TRUE;
@@ -138,8 +156,8 @@ int isSane(){
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
 void insert(int val){
-  __transaction_atomic{
     // traverse the list to find the insertion point
+    __transaction_atomic{
     const LLNode* prev = sentinela;
     const LLNode* curr = sentinela->next;
 
@@ -156,7 +174,7 @@ void insert(int val){
       // ESCRITA : REGIÃO CRITICA
 
       LLNode* insert_point = prev;
-      LLNode* novo = malloc(sizeof(LLNode));
+      novo = malloc(sizeof(LLNode));
       novo->val = val;
       novo->next = NULL;
 
@@ -168,7 +186,8 @@ void insert(int val){
 
 // search function
 void lookup(void* arg){
-  __transaction_atomic{
+  printLista();
+  //__transaction_atomic{
     pthread_arg* p = (pthread_arg*) arg;
     int val = p->in;
 
@@ -187,7 +206,7 @@ void lookup(void* arg){
     found = ((curr != NULL) && (curr->val == val));
 
     p->out = found;
-  }
+  //}
 }
 
 // findmax function
@@ -218,8 +237,8 @@ int findmin(){
 
 // remove a node if its value == val
 void removeNode(int val){
-  __transaction_atomic{
     // find the node whose val matches the request
+    __transaction_atomic{
     const LLNode* prev = sentinela;
     const LLNode* curr = prev->next;
 
@@ -230,6 +249,7 @@ void removeNode(int val){
 
         LLNode* mod_point = prev;
         mod_point->next = curr->next;
+
 
         // delete curr...
         free(curr);
@@ -246,20 +266,6 @@ void removeNode(int val){
   }
 }
 
-// print the list
-void printLista(){
-    const LLNode* curr = sentinela;
-    curr = (curr->next);
-
-    printf("lista :");
-    while (curr != NULL){
-        printf(" %d ->", curr->val);
-        curr = (curr->next);
-    }
-
-    printf(" NULL\n\n");
-}
-
 void* experiment(void* arg){
   /* Garante thread id unico para a threads */
   int tid;
@@ -267,9 +273,8 @@ void* experiment(void* arg){
     tid = gtid++;
   }
 
-  printf("tid = %d\n", tid);
   int result, val, i;
-  float action;
+  int action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
   l_ops = l_lookups_true = l_lookups_false = l_inserts = l_removes = 0;
 
@@ -282,7 +287,7 @@ void* experiment(void* arg){
 
   if(num_ops != 0){
     for(i = 0; i < num_ops / n_threads; i++){
-      action = (rand()%100) / 100.0;
+      action = (rand()%100);
       val = rand()%100;
 
       if (action < lookupPct) {
@@ -295,13 +300,12 @@ void* experiment(void* arg){
           l_lookups_true++;
         else
           l_lookups_false++;
-      }
-      else if (action < insertPct) {
+
+      } else if (action < insertPct) {
         printf("%d -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
-      }
-      else {
+      } else {
         printf("%d -> remove %d\n", tid, val);
         removeNode(&val);
         l_removes++;
@@ -309,12 +313,15 @@ void* experiment(void* arg){
 
       int sane = isSane();
       l_ops++;
+      printf("%d esperando barreira\n",tid);
+      pthread_barrier_wait(&barrier);
+      printf("\n ---- TERMINOU UM LAÇO FOR ---\n");
     }
     // Time duration mode
   } else {
     printf("%d Entrou time duration mode\n",tid);
     while(timeDiff < duration){
-      action = (rand()%100) / 100.0;
+      action = (rand()%100);
       val = rand()%100;
       if (action < lookupPct) {
         p->in = val;
@@ -345,7 +352,7 @@ void* experiment(void* arg){
     }
   }
 
-  /* TODO STUFF LOTSA */
+  /* Soma os dados locais aos dados globais */
   __transaction_atomic{
     count_ops += l_ops;
     inserts += l_inserts;
@@ -386,8 +393,8 @@ void printInfo(){
     printf("\nDuração = %2.lf segundos", duration);
   }
   printf("\nTamanho máximo da fila = %d nodes", datasetsize);
-  printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
-            lookupPct, insertPct - lookupPct, 1.0f - insertPct);
+  printf("\nPorcentagens das operações: %d%% Lookup / %d%% Insert / %d%% Remove",
+            lookupPct, insertPct - lookupPct, 100 - insertPct);
 
   if(doWarmup)
     printf("\nWarm Up: ativado");
@@ -397,7 +404,7 @@ void printInfo(){
 
 int main(int argc, char const *argv[]) {
   int i;
-  printf("\nLinked List - versão mutex\n");
+  printf("\nLinked List - versão transactions\n");
 
 	getArgs(argc, argv);
 	checkData();
@@ -411,13 +418,18 @@ int main(int argc, char const *argv[]) {
   pthread_t threads[n_threads -1];
   void* pth_status;
 
+  pthread_barrier_init(&barrier, NULL ,n_threads);
+
   /* Warm Up */
   // warmup inserts half of the elements in the datasetsize
   if(doWarmup){
       for (i = 0; i < datasetsize; i+=2) {
         insert(i);
       }
+
+      printLista();
   }
+
 
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
@@ -429,7 +441,7 @@ int main(int argc, char const *argv[]) {
 
   experiment(NULL);
 
-  for(i = 0; i < n_threads; i++){
+  for(i = 1; i < n_threads; i++){
 		 pthread_join(threads[i], &pth_status);
 	}
 
