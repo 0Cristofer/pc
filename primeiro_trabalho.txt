@@ -1,0 +1,35 @@
+Programas RSTM: Não precisam sequencial. + simples. Tem que estar no relatorio
+
+Compílar com O3
+
+Análise no programa do PARSEC: Gráfico de speedup (2,4,8,16,32)
+linhas no grafico: Ideal, programa inteiro, parte paralela
+*Para calcular a paralela precisa mudar no sequencial só o tempo referente ao mesmo bloco de codigo
+
+Explicar por que não acompanha o ideal.
+*Não escrever o óbvio. : Citar o percentual das distancias das linhas ate a linha ideal.
+
+Para montar o grafico usar versões "limpas" : sem instrumentação e sem prints adicionais de debug.
+
+Informações ideias para analisar desempenho:
+ipc (perf) 
+Memoria: Leituras, escritas. (perf & PIN) + Padrão de acessos aos Registradores (PIN)
+Cache: acertos e falhas. (hit/miss) (perf) (papi)
+falhas de pagina
+trocas de contexto
+papi: tipos de instruções
+perfsuite -> psrun (instrumentação automizada com o papi) 
+
+Pelo menos uma analise instrumentada com o papi (isso se aplica a linha "parte paralela" no grafico)
+
+O grande objetivo é descobrir qual implementação é a melhor.
+Não separar por seções de implementações.
+Separar por informações de desempenho.
+
+SEMPRE GRAFICOS.
+
+DATAS DE SER FELIZ:
+T1 8/6
+T2 22/6
+T3 6/7
+Exame 19/7
