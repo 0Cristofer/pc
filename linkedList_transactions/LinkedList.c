@@ -33,12 +33,12 @@ static int inserts = 0;
 static int removes = 0;
 
 /* Dados globais com valores padrão */
-static int datasetsize = 256;                  // number of items
-static double duration = 5.0f;                 // in seconds
-static int doWarmup = FALSE;
-static int num_ops = 0;                        // number of operations mode value.
+static int datasetsize = 256;                  // Number of items
+static double duration = 5.0f;                 // In seconds
+static int doWarmup = FALSE;                   // Trigger de WarmUp
+static int num_ops = 0;                        // Number of operations mode value.
 static int count_ops = 0;
-static int n_threads = 2;
+static int n_threads = 2;                      // Number of threads
 
 // these three are for getting various lookup/insert/remove ratios
 static int lookupPct = 34;
@@ -313,9 +313,12 @@ void* experiment(void* arg){
 
       int sane = isSane();
       l_ops++;
-      printf("%d esperando barreira\n",tid);
+
+      //printf("%d esperando barreira\n",tid);
+
+      if(tid == 0)
+        printf("\n ---- TERMINOU UM LAÇO FOR ---\n");
       pthread_barrier_wait(&barrier);
-      printf("\n ---- TERMINOU UM LAÇO FOR ---\n");
     }
     // Time duration mode
   } else {
