@@ -6,9 +6,14 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <time.h>
+#include <pthread.h>
 
 #define TRUE 1
 #define FALSE 0
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexInsert = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexRemove = PTHREAD_MUTEX_INITIALIZER;
 
 /* Estruturas */
 typedef struct pthread_arg{
@@ -29,13 +34,21 @@ static int removes = 0;
 
 /* Dados globais com valores padrão */
 static int datasetsize = 256;                  // number of items
-static int duration = 5;                       // in seconds
+static double duration = 5.0f;                 // in seconds
 static int doWarmup = FALSE;
 static int num_ops = 0;                        // number of operations mode value.
+static int count_ops = 0;
+static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
 static float lookupPct = 0.34f;
 static float insertPct = 0.67f;
+
+// Controla o tempo de execução
+struct timespec tstart, tend;
+double timeDiff;
+
+int gtid = 0;
 
 /* Exibe ajuda e finaliza o programa */
 void help(int msg){
@@ -52,8 +65,9 @@ void help(int msg){
       break;
   }
 
+  printf("\n\tn : Número de threads [2]");
 	printf("\n\ts : Tamanho do datasetsize [256]");
-  printf("\n\tt : Tempo de duração da execução (segundos) [1]");
+  printf("\n\tt : Tempo de duração da execução (segundos) [5.0]");
   printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
   printf("\n\tx : Muda para o modo de execução por número de operações.");
   printf("\n\th : Mostra essa mensagem\n\n");
@@ -66,20 +80,25 @@ void getArgs(int argc, char *argv[]){
 	char op;
 
 	struct option longopts[] = {
+    {"n_threads", 1, NULL, 'n'},
     {"size", 1, NULL, 's'},
     {"time", 1, NULL, 't'},
     {"warmup", 0, NULL, 'w'},
     {"x", 1, NULL, 'x'}
 	};
 
-	while ((op = getopt_long(argc, argv, "s:t:wx:h", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "n:s:t:wx:h", longopts, NULL)) != -1) {
 		switch (op) {
+      case 'n':
+        n_threads = atoi(optarg);
+        break;
+
 			case 's':
 				datasetsize = atoi(optarg);
 				break;
 
       case 't':
-        duration = atoi(optarg);
+        duration = atof(optarg);
         break;
 
       case 'w':
@@ -99,24 +118,6 @@ void getArgs(int argc, char *argv[]){
         break;
       }
     }
-}
-
-/* Checa se os parametros são validos, aborta caso não sejam */
-void checkData(){
-	if (datasetsize < 1){
-		printf("Tamanho da lista inválida. Abortando...\n");
-		exit(1);
-	}
-
-  if(duration <=0){
-    printf("Tempo de execução inválido. Abortando...\n");
-    exit(1);
-  }
-
-  if(num_ops < 0){
-    printf("Modo Número de operações: Valor inválido. Abortando...\n");
-    exit(1);
-  }
 }
 
 /* Sanity Check */
@@ -141,6 +142,7 @@ int isSane(){
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
 void insert(int val){
+  pthread_mutex_lock(&mutexInsert);
   // traverse the list to find the insertion point
   const LLNode* prev = sentinela;
   const LLNode* curr = sentinela->next;
@@ -155,9 +157,9 @@ void insert(int val){
 
   // now insert new_node between prev and curr
   if (!curr || (curr->val > val)){
-    LLNode* insert_point = prev;
-
     // ESCRITA : REGIÃO CRITICA
+
+    LLNode* insert_point = prev;
     LLNode* novo = malloc(sizeof(LLNode));
     novo->val = val;
     novo->next = NULL;
@@ -165,10 +167,12 @@ void insert(int val){
     insert_point->next = novo;
     // FIM
     }
+    pthread_mutex_unlock(&mutexInsert);
 }
 
 // search function
 void lookup(void* arg){
+  pthread_mutex_lock(&mutex);
   pthread_arg* p = (pthread_arg*) arg;
   int val = p->in;
 
@@ -187,6 +191,7 @@ void lookup(void* arg){
   found = ((curr != NULL) && (curr->val == val));
 
   p->out = found;
+  pthread_mutex_unlock(&mutex);
 }
 
 // findmax function
@@ -217,6 +222,7 @@ int findmin(){
 
 // remove a node if its value == val
 void removeNode(int val){
+  pthread_mutex_lock(&mutexRemove);
   // find the node whose val matches the request
   const LLNode* prev = sentinela;
   const LLNode* curr = prev->next;
@@ -224,9 +230,9 @@ void removeNode(int val){
   while (curr != NULL) {
     // if we find the node, disconnect it and end the search
     if (curr->val == val) {
-      LLNode* mod_point = prev;
-
       // ESCRITA : REGIÃO CRITICA
+
+      LLNode* mod_point = prev;
       mod_point->next = curr->next;
 
       // delete curr...
@@ -241,6 +247,7 @@ void removeNode(int val){
     prev = curr;
     curr = prev->next;
   }
+  pthread_mutex_unlock(&mutexRemove);
 }
 
 // print the list
@@ -257,8 +264,130 @@ void printLista(){
     printf(" NULL\n\n");
 }
 
+void* experiment(void* arg){
+  /* Garante thread id unico para a threads */
+  pthread_mutex_lock(&mutex);
+  int tid = gtid++;
+  pthread_mutex_unlock(&mutex);
+
+  printf("tid = %d\n", tid);
+  int result, val, i;
+  float action;
+  int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
+  l_ops = l_lookups_true = l_lookups_false = l_inserts = l_removes = 0;
+
+  pthread_arg* p;
+  p = malloc(sizeof(pthread_arg));
+
+  srand(time(NULL) + tid);
+
+  //printf("\nAction = %f | val = %d\n", action, val);
+
+  if(num_ops != 0){
+    for(i = 0; i < num_ops / n_threads; i++){
+      action = (rand()%100) / 100.0;
+      val = rand()%100;
+
+      if (action < lookupPct) {
+        printf("%d -> lookup\n", tid);
+        p->in = val;
+        lookup(p);
+        result = p->out;
+
+        if (result)
+          l_lookups_true++;
+        else
+          l_lookups_false++;
+      }
+      else if (action < insertPct) {
+        printf("%d -> insert %d\n", tid, val);
+        insert(val);
+        l_inserts++;
+      }
+      else {
+        printf("%d -> remove %d\n", tid, val);
+        removeNode(&val);
+        l_removes++;
+      }
+
+      int sane = isSane();
+      l_ops++;
+    }
+    // Time duration mode
+  } else {
+    printf("%d Entrou time duration mode\n",tid);
+    while(timeDiff < duration){
+      action = (rand()%100) / 100.0;
+      val = rand()%100;
+      if (action < lookupPct) {
+        p->in = val;
+        lookup(p);
+        result = p->out;
+
+        if (result)
+          l_lookups_true++;
+        else
+          l_lookups_false++;
+      }
+      else if (action < insertPct) {
+        insert(val);
+        l_inserts++;
+      }
+      else {
+        removeNode(&val);
+        l_removes++;
+      }
+
+      int sane = isSane();
+      l_ops++;
+
+      if(tid == 0){
+        clock_gettime(CLOCK_MONOTONIC, &tend);
+        timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
+      }
+    }
+  }
+
+  /* TODO STUFF LOTSA */
+  pthread_mutex_lock(&mutex);
+  count_ops += l_ops;
+  inserts += l_inserts;
+  lookups_true += l_lookups_true;
+  lookups_false += l_lookups_false;
+  removes += l_removes;
+  pthread_mutex_unlock(&mutex);
+}
+
+/* Checa se os parametros são validos, aborta caso não sejam */
+void checkData(){
+  if(n_threads < 1){
+    printf("Número inválido de threads. Abortando...\n");
+    exit(1);
+  }
+
+	if(datasetsize < 1){
+		printf("Tamanho da lista inválida. Abortando...\n");
+		exit(1);
+	}
+
+  if(duration <=0){
+    printf("Tempo de execução inválido. Abortando...\n");
+    exit(1);
+  }
+
+  if(num_ops < 0){
+    printf("Modo Número de operações: Valor inválido. Abortando...\n");
+    exit(1);
+  }
+}
+
 void printInfo(){
-  printf("\nDuração = %d segundos", duration);
+  printf("\nNúmero de threads = %d", n_threads);
+  if(num_ops > 0){
+    printf("\nNúmero de operações = %d", num_ops);
+  } else {
+    printf("\nDuração = %2.lf segundos", duration);
+  }
   printf("\nTamanho máximo da fila = %d nodes", datasetsize);
   printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
             lookupPct, insertPct - lookupPct, 1.0f - insertPct);
@@ -267,50 +396,11 @@ void printInfo(){
     printf("\nWarm Up: ativado");
   else
     printf("\nWarm Up: desativado");
-
-  printf("\nIniciando o experimento...\n\n");
-}
-
-void experiment(){
-    //int tid = (int*) arg;
-    int result;
-
-    pthread_arg* p = malloc(sizeof(pthread_arg));
-
-    float action = (rand()%100) / 100.0;
-    int val = rand()%1000;
-
-    printf("\nAction = %f | val = %d\n", action, val);
-
-    if (action < lookupPct) {
-      printf("Lookup\n");
-
-      p->in = val;
-      lookup(p);
-      result = p->out;
-
-      if (result)
-        lookups_true++;
-      else
-        lookups_false++;
-    }
-    else if (action < insertPct) {
-      printf("Insert\n");
-      insert(val);
-      inserts++;
-    }
-    else {
-        printf("Remove\n");
-        removeNode(val);
-        removes++;
-    }
-
-    int sane = isSane();
 }
 
 int main(int argc, char const *argv[]) {
   int i;
-  printf("\nLinked List - versão sequencial\n");
+  printf("\nLinked List - versão mutex\n");
 
 	getArgs(argc, argv);
 	checkData();
@@ -321,6 +411,9 @@ int main(int argc, char const *argv[]) {
   sentinela->val = -1;
   sentinela->next = NULL;
 
+  pthread_t threads[n_threads -1];
+  void* pth_status;
+
   /* Warm Up */
   // warmup inserts half of the elements in the datasetsize
   if(doWarmup){
@@ -329,17 +422,24 @@ int main(int argc, char const *argv[]) {
       }
   }
 
-  /* TODO implementar mecanismo que aleatoriza as operações? */
-  /* for 1 -> datasetsize : pthread_create? */
-  /* rand(x) -> switch(x): case  1: insert | case 2: remove? */
-  /* barreiras ? */
+  clock_gettime(CLOCK_MONOTONIC, &tstart);
+  timeDiff = 0;
 
-  srand (time(NULL));
+  printf("\n\n\t--- Rodando experimentos ---\n");
+  for(i = 1; i < n_threads; i++){
+		pthread_create(&threads[i], NULL, experiment, NULL);
+	}
 
-  for(i = 0; i < num_ops; i++){
-    experiment();
-  }
+  experiment(NULL);
 
+  for(i = 0; i < n_threads; i++){
+		 pthread_join(threads[i], &pth_status);
+	}
+
+  clock_gettime(CLOCK_MONOTONIC, &tend);
+  timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
+
+  printf("\t    FIM DA EXECUÇÃO.\n");
 
   printLista();
   printf("\nSanity Check: ");
@@ -348,7 +448,8 @@ int main(int argc, char const *argv[]) {
   else
     printf("Failed! Isn't sane!\n");
 
-  printf("FIM DA EXECUÇÃO.\n");
+  printf("Tempo de execução dos experimentos = %lf segundos\n", timeDiff);
+  printf("Total de operações realizadas = %d\n",count_ops);
   printf("Total de lookups acertados: %d\n", lookups_true);
   printf("Total de lookups falhados: %d\n", lookups_false);
   printf("Total de Inserts: %d\n", inserts);

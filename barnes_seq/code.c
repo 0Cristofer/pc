@@ -149,7 +149,7 @@ main(int argc, string argv[]) {
     };
 
     printf("COMPUTESTART  = %12lu\n",Global->computestart);
-    
+
     SlaveStart();
 
     {
@@ -339,7 +339,7 @@ startrun(){
    fleaves = getdparam("fleaves");
    tstop = getdparam("tstop");
    dtout = getdparam("dtout");
-   NPROC = getiparam("NPROC");
+   NPROC = 1; 
    Local[0].nstep = 0;
    pranset(seed);
    testdata();
