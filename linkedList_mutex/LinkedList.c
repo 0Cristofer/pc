@@ -12,8 +12,6 @@
 #define FALSE 0
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexInsert = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutexRemove = PTHREAD_MUTEX_INITIALIZER;
 
 /* Estruturas */
 typedef struct pthread_arg{
@@ -41,8 +39,8 @@ static int count_ops = 0;
 static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
-static float lookupPct = 0.34f;
-static float insertPct = 0.67f;
+static float lookupPct = 0.30f;
+static float insertPct = 0.81f;
 
 // Controla o tempo de execução
 struct timespec tstart, tend;
@@ -123,18 +121,20 @@ void getArgs(int argc, char *argv[]){
 /* Sanity Check */
 int isSane(){
     int sane = TRUE;
-    const LLNode* prev = sentinela;
-    const LLNode* curr = prev->next;
+    pthread_mutex_lock(&mutex);
+    LLNode* prev = sentinela;
+    LLNode* curr = prev->next;
 
     while (curr != NULL) {
         if ((prev->val) >= (curr->val)) {
-            printf("FAILED SANITY CHECK IN: %d < %d\n", prev->val, curr->val );
+            printf("FAILED SANITY CHECK IN: %d < %d\n", prev->val, curr->val);
             sane = FALSE;
             break;
         }
         prev = curr;
         curr = (curr->next);
     }
+    pthread_mutex_unlock(&mutex);
     return sane;
 }
 
@@ -142,10 +142,10 @@ int isSane(){
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
 void insert(int val){
-  pthread_mutex_lock(&mutexInsert);
+  pthread_mutex_lock(&mutex);
   // traverse the list to find the insertion point
-  const LLNode* prev = sentinela;
-  const LLNode* curr = sentinela->next;
+  LLNode* prev = sentinela;
+  LLNode* curr = sentinela->next;
 
   while (curr != NULL){
     if (curr->val >= val)
@@ -162,12 +162,12 @@ void insert(int val){
     LLNode* insert_point = prev;
     LLNode* novo = malloc(sizeof(LLNode));
     novo->val = val;
-    novo->next = NULL;
+    novo->next = curr;
 
     insert_point->next = novo;
     // FIM
     }
-    pthread_mutex_unlock(&mutexInsert);
+    pthread_mutex_unlock(&mutex);
 }
 
 // search function
@@ -178,7 +178,7 @@ void lookup(void* arg){
 
   int found = FALSE;
 
-  const LLNode* curr = sentinela;
+  LLNode* curr = sentinela;
   curr = curr->next;
 
   while (curr != NULL) {
@@ -194,38 +194,12 @@ void lookup(void* arg){
   pthread_mutex_unlock(&mutex);
 }
 
-// findmax function
-int findmax(){
-    int max = -1;
-    const LLNode* curr = sentinela;
-
-    while (curr != NULL) {
-        max = curr->val;
-        curr = curr->next;
-    }
-
-    return max;
-}
-
-// findmin function
-int findmin(){
-    int min = -1;
-
-    const LLNode* curr = sentinela;
-    curr = curr->next;
-
-    if (curr != NULL)
-        min = curr->val;
-
-    return min;
-}
-
 // remove a node if its value == val
 void removeNode(int val){
-  pthread_mutex_lock(&mutexRemove);
+  pthread_mutex_lock(&mutex);
   // find the node whose val matches the request
-  const LLNode* prev = sentinela;
-  const LLNode* curr = prev->next;
+  LLNode* prev = sentinela;
+  LLNode* curr = prev->next;
 
   while (curr != NULL) {
     // if we find the node, disconnect it and end the search
@@ -247,12 +221,12 @@ void removeNode(int val){
     prev = curr;
     curr = prev->next;
   }
-  pthread_mutex_unlock(&mutexRemove);
+  pthread_mutex_unlock(&mutex);
 }
 
 // print the list
 void printLista(){
-    const LLNode* curr = sentinela;
+    LLNode* curr = sentinela;
     curr = (curr->next);
 
     printf("lista :");
@@ -270,7 +244,7 @@ void* experiment(void* arg){
   int tid = gtid++;
   pthread_mutex_unlock(&mutex);
 
-  printf("tid = %d\n", tid);
+  //printf("tid = %d\n", tid);
   int result, val, i;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
@@ -286,7 +260,7 @@ void* experiment(void* arg){
   if(num_ops != 0){
     for(i = 0; i < num_ops / n_threads; i++){
       action = (rand()%100) / 100.0;
-      val = rand()%100;
+      val = rand() % 1000;
 
       if (action < lookupPct) {
         printf("%d -> lookup\n", tid);
@@ -302,23 +276,25 @@ void* experiment(void* arg){
       else if (action < insertPct) {
         printf("%d -> insert %d\n", tid, val);
         insert(val);
+        if(val > 50)
+            removeNode(val);
         l_inserts++;
       }
       else {
         printf("%d -> remove %d\n", tid, val);
-        removeNode(&val);
+        removeNode(val);
         l_removes++;
       }
 
-      int sane = isSane();
+      //int sane = isSane();
       l_ops++;
     }
     // Time duration mode
   } else {
-    printf("%d Entrou time duration mode\n",tid);
+    //printf("%d Entrou time duration mode\n",tid);
     while(timeDiff < duration){
       action = (rand()%100) / 100.0;
-      val = rand()%100;
+      val = rand() % 1000;
       if (action < lookupPct) {
         p->in = val;
         lookup(p);
@@ -334,11 +310,11 @@ void* experiment(void* arg){
         l_inserts++;
       }
       else {
-        removeNode(&val);
+        removeNode(val);
         l_removes++;
       }
 
-      int sane = isSane();
+      //int sane = isSane();
       l_ops++;
 
       if(tid == 0){
@@ -348,7 +324,6 @@ void* experiment(void* arg){
     }
   }
 
-  /* TODO STUFF LOTSA */
   pthread_mutex_lock(&mutex);
   count_ops += l_ops;
   inserts += l_inserts;
@@ -398,7 +373,7 @@ void printInfo(){
     printf("\nWarm Up: desativado");
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
   int i;
   printf("\nLinked List - versão mutex\n");
 
@@ -411,7 +386,7 @@ int main(int argc, char const *argv[]) {
   sentinela->val = -1;
   sentinela->next = NULL;
 
-  pthread_t threads[n_threads -1];
+  pthread_t threads[n_threads];
   void* pth_status;
 
   /* Warm Up */
@@ -426,11 +401,11 @@ int main(int argc, char const *argv[]) {
   timeDiff = 0;
 
   printf("\n\n\t--- Rodando experimentos ---\n");
-  for(i = 1; i < n_threads; i++){
+  for(i = 0; i < n_threads; i++){
 		pthread_create(&threads[i], NULL, experiment, NULL);
 	}
 
-  experiment(NULL);
+  //experiment(NULL);
 
   for(i = 0; i < n_threads; i++){
 		 pthread_join(threads[i], &pth_status);

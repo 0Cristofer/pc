@@ -11,12 +11,12 @@
 #define FALSE 0
 
 /* Estruturas */
-typedef struct pthread_arg{
+typedef struct exp_arg{
   int in;
   int out;
-}pthread_arg;
+}exp_arg;
 
-pthread_arg* p;
+exp_arg* p;
 
 typedef struct LLNode {
     int val;
@@ -135,7 +135,7 @@ int isSane(){
     const LLNode* curr = prev->next;
 
     while (curr != NULL) {
-        if ((prev->val) >= (curr->val)) {
+        if ((prev->val) > (curr->val)) {
             printf("FAILED SANITY CHECK IN: %d < %d\n", prev->val, curr->val );
             sane = FALSE;
             break;
@@ -151,8 +151,8 @@ int isSane(){
 // sorted order; if val is already in the list, exit without inserting
 void insert(int val){
   // traverse the list to find the insertion point
-  const LLNode* prev = sentinela;
-  const LLNode* curr = sentinela->next;
+  LLNode* prev = sentinela;
+  LLNode* curr = sentinela->next;
 
   while (curr != NULL){
     if (curr->val >= val)
@@ -163,13 +163,13 @@ void insert(int val){
   }
 
   // now insert new_node between prev and curr
-  if (!curr || (curr->val > val)){
+  if ((curr == NULL) || (curr->val > val)){
     LLNode* insert_point = prev;
 
     // ESCRITA : REGIÃO CRITICA
     LLNode* novo = malloc(sizeof(LLNode));
     novo->val = val;
-    novo->next = NULL;
+    novo->next = curr;
 
     insert_point->next = novo;
     // FIM
@@ -178,13 +178,12 @@ void insert(int val){
 
 // search function
 void lookup(void* arg){
-  pthread_arg* p = (pthread_arg*) arg;
-  int val = p->in;
+  exp_arg* parm = (exp_arg*) arg;
+  int val = parm->in;
 
   int found = FALSE;
 
-  const LLNode* curr = sentinela;
-  curr = curr->next;
+  LLNode* curr = sentinela->next;
 
   while (curr != NULL) {
     if (curr->val >= val)
@@ -195,40 +194,14 @@ void lookup(void* arg){
 
   found = ((curr != NULL) && (curr->val == val));
 
-  p->out = found;
-}
-
-// findmax function
-int findmax(){
-    int max = -1;
-    const LLNode* curr = sentinela;
-
-    while (curr != NULL) {
-        max = curr->val;
-        curr = curr->next;
-    }
-
-    return max;
-}
-
-// findmin function
-int findmin(){
-    int min = -1;
-
-    const LLNode* curr = sentinela;
-    curr = curr->next;
-
-    if (curr != NULL)
-        min = curr->val;
-
-    return min;
+  parm->out = found;
 }
 
 // remove a node if its value == val
 void removeNode(int val){
   // find the node whose val matches the request
-  const LLNode* prev = sentinela;
-  const LLNode* curr = prev->next;
+  LLNode* prev = sentinela;
+  LLNode* curr = prev->next;
 
   while (curr != NULL) {
     // if we find the node, disconnect it and end the search
@@ -254,20 +227,19 @@ void removeNode(int val){
 
 // print the list
 void printLista(){
-    const LLNode* curr = sentinela;
-    curr = (curr->next);
+    LLNode* curr = sentinela->next;
 
     printf("lista :");
     while (curr != NULL){
         printf(" %d ->", curr->val);
-        curr = (curr->next);
+        curr = curr->next;
     }
 
     printf(" NULL\n\n");
 }
 
 void printInfo(){
-  printf("\nDuração = %d segundos", duration / 10000);
+  printf("\nDuração = %.2lf segundos", duration);
   printf("\nTamanho máximo da fila = %d nodes", datasetsize);
   printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
             lookupPct, insertPct - lookupPct, 1.0f - insertPct);
@@ -300,12 +272,12 @@ void experiment(){
         lookups_false++;
     }
     else if (action < insertPct) {
-      //printf("Insert\n");
+      printf("Insert: %d\n", val);
       insert(val);
       inserts++;
     }
     else {
-        //printf("Remove\n");
+        printf("Remove: %d\n", val);
         removeNode(val);
         removes++;
     }
@@ -313,7 +285,7 @@ void experiment(){
     int sane = isSane();
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
   int i;
   printf("\nLinked List - versão sequencial\n");
 
@@ -326,7 +298,7 @@ int main(int argc, char const *argv[]) {
   sentinela->val = -1;
   sentinela->next = NULL;
 
-  p = malloc(sizeof(pthread_arg));
+  p = malloc(sizeof(exp_arg));
 
   /* Warm Up */
   // warmup inserts half of the elements in the datasetsize
@@ -362,7 +334,7 @@ int main(int argc, char const *argv[]) {
 
   printf("\t    FIM DA EXECUÇÃO.\n");
 
-  //printLista();
+  printLista();
   printf("\nSanity Check: ");
   if(isSane())
     printf("Passed\n");

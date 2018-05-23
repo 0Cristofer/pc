@@ -1,0 +1,3 @@
+/home/cristofer/Downloads/pc/pc/linkedList_sem/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/cristofer/Downloads/pc/pc/linkedList_sem/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/cristofer/Downloads/pc/pc/linkedList_sem/cmake-build-debug/CMakeFiles/linkedList_sem.dir
