@@ -14,17 +14,14 @@
 #define FALSE 0
 
 sem_t sem;
+int mem_ctrl_id;
+sh_mem_add_t sh_mem_adds;
 
 /* Estruturas */
 typedef struct pthread_arg{
   int in;
   int out;
 }pthread_arg;
-
-typedef struct LLNode {
-    int val;
-    struct LLNode *next;
-} LLNode;
 
 LLNode* sentinela;
 static int lookups_true = 0;
@@ -144,6 +141,7 @@ int isSane(){
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
 void insert(int val){
+  int id;
   sem_wait(&sem);
   // traverse the list to find the insertion point
   LLNode* prev = sentinela;
@@ -162,9 +160,10 @@ void insert(int val){
     // ESCRITA : REGIÃO CRITICA
 
     LLNode* insert_point = prev;
-    LLNode* novo = malloc(sizeof(LLNode));
+    LLNode* novo = shAlloc(&id);
     novo->val = val;
     novo->next = curr;
+    novo->id = id;
 
     insert_point->next = novo;
     // FIM
@@ -212,7 +211,7 @@ void removeNode(int val){
       mod_point->next = curr->next;
 
       // delete curr...
-      free(curr);
+      shFree(curr->id);
       // FIM
       break;
     }
@@ -404,6 +403,32 @@ int main(int argc, char *argv[]) {
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
 
+  /* SHM */
+  printf("\n\n\t--- Rodando experimentos ---\n");
+
+  createShMem(1000); //1000 é o número de nós máximo
+
+  //FORK
+
+  //A partir daqui todos o processos executam isso
+  getMemAdds();
+  sentinela = sh_mem_adds.node_mem_add;
+
+  sh_mem_adds.ctrl_add = NULL;
+  sh_mem_adds.free_list_add = NULL;
+  sh_mem_adds.node_mem_add = NULL;
+
+  experiment(NULL);
+
+  //FORK "join"
+
+
+  //TODO estatísticas ainda não estão na memória compartilhada, apenas os nós e
+  //dados referentes a SH. Após a implementação do fork/join o funcionamento básico
+  //*irá funcionar*, faltando os dados estatísticos
+  /* SHM_END */
+
+  /* TRHEAD (Remover quando inserir o fork)*/
   printf("\n\n\t--- Rodando experimentos ---\n");
   for(i = 0; i < n_threads; i++){
 		pthread_create(&threads[i], NULL, experiment, NULL);
@@ -414,6 +439,7 @@ int main(int argc, char *argv[]) {
   for(i = 0; i < n_threads; i++){
 		 pthread_join(threads[i], &pth_status);
   }
+  /* THREAD_END */
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
   timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);

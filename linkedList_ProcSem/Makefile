@@ -1,5 +1,5 @@
 all:
-	gcc *.c -pthread -lm -o LinkedList_mutex
+	gcc LinkedList.c SharedMemoryController.c -pthread -o LinkedList_ProcSem
 
 clean:
-	rm LinkedList_mutex
+	rm LinkedList_ProcSem
