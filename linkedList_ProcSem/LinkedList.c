@@ -6,16 +6,15 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <time.h>
+#include <unistd.h>
 #include <pthread.h>
-#include <semaphore.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <sys/wait.h>
 #include "SharedMemoryController.h"
 
 #define TRUE 1
 #define FALSE 0
-
-sem_t sem;
-int mem_ctrl_id;
-sh_mem_add_t sh_mem_adds;
 
 /* Estruturas */
 typedef struct pthread_arg{
@@ -23,18 +22,17 @@ typedef struct pthread_arg{
   int out;
 }pthread_arg;
 
+int mem_ctrl_id;
 LLNode* sentinela;
-static int lookups_true = 0;
-static int lookups_false = 0;
-static int inserts = 0;
-static int removes = 0;
+stats_t* stats;
+sem_t* sem;
+sh_mem_add_t sh_mem_adds;
 
 /* Dados globais com valores padrão */
 static int datasetsize = 256;                  // number of items
 static double duration = 5.0f;                 // in seconds
 static int doWarmup = FALSE;
 static int num_ops = 0;                        // number of operations mode value.
-static int count_ops = 0;
 static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
@@ -120,9 +118,9 @@ void getArgs(int argc, char *argv[]){
 /* Sanity Check */
 int isSane(){
     int sane = TRUE;
-    sem_wait(&sem);
+    sem_wait(sem);
     LLNode* prev = sentinela;
-    LLNode* curr = prev->next;
+    LLNode* curr = getNode(prev->next);
 
     while (curr != NULL) {
         if ((prev->val) >= (curr->val)) {
@@ -131,28 +129,38 @@ int isSane(){
             break;
         }
         prev = curr;
-        curr = (curr->next);
+        curr = getNode(curr->next);
     }
-    sem_post(&sem);
+    sem_post(sem);
     return sane;
 }
 
 
 // insert method; find the right place in the list, add val so that it is in
 // sorted order; if val is already in the list, exit without inserting
-void insert(int val){
+void insert(int val, int* done){
   int id;
-  sem_wait(&sem);
+  *done = 1;
+  sem_wait(sem);
+  //printf("Inserindo %d\n", val);
   // traverse the list to find the insertion point
   LLNode* prev = sentinela;
-  LLNode* curr = sentinela->next;
+  LLNode* curr = getNode(prev->next);
+
+  printf("prev: \n");
+  printNode(prev);
+  if(curr){
+    printf("curr: \n");
+    printNode(curr);
+  }
 
   while (curr != NULL){
+    //printf("Procuando fim\n");
     if (curr->val >= val)
       break;
 
     prev = curr;
-    curr = prev->next;
+    curr = getNode(curr->next);
   }
 
   // now insert new_node between prev and curr
@@ -161,50 +169,63 @@ void insert(int val){
 
     LLNode* insert_point = prev;
     LLNode* novo = shAlloc(&id);
+    if(id == -1){
+      sem_post(sem);
+      *done = 0;
+      printf("Número máximo de nós alcançado\n");
+      return;
+    }
+
     novo->val = val;
-    novo->next = curr;
+    novo->next = prev->next;
     novo->id = id;
 
-    insert_point->next = novo;
-    // FIM
+    insert_point->next = novo->id;
+    //printNode(novo);
+    //printf("Fim inserir %d\n", val);
     }
-    sem_post(&sem);
+    //printLista();
+    sem_post(sem);
 }
 
 // search function
 void lookup(void* arg){
-  sem_wait(&sem);
+  sem_wait(sem);
   pthread_arg* p = (pthread_arg*) arg;
+  //printf("Procurando %d\n", p->in);
   int val = p->in;
 
   int found = FALSE;
 
   LLNode* curr = sentinela;
-  curr = curr->next;
+  curr = getNode(curr->next);
 
   while (curr != NULL) {
     if (curr->val >= val)
       break;
 
-    curr = curr->next;
+    curr = getNode(curr->next);
   }
 
   found = ((curr != NULL) && (curr->val == val));
 
   p->out = found;
-  sem_post(&sem);
+  //printf("Fim procurar %d\n", p->in);
+  sem_post(sem);
 }
 
 // remove a node if its value == val
 void removeNode(int val){
-  sem_wait(&sem);
+  sem_wait(sem);
+  //printf("Removendo %d\n", val);
   // find the node whose val matches the request
   LLNode* prev = sentinela;
-  LLNode* curr = prev->next;
+  LLNode* curr = getNode(prev->next);
 
   while (curr != NULL) {
     // if we find the node, disconnect it and end the search
     if (curr->val == val) {
+      printf("Achou %d, removendo\n", val);
       // ESCRITA : REGIÃO CRITICA
 
       LLNode* mod_point = prev;
@@ -220,33 +241,33 @@ void removeNode(int val){
       break;
     }
     prev = curr;
-    curr = prev->next;
+    curr = getNode(prev->next);
   }
-  sem_post(&sem);
+  //printf("Fim remover %d\n", val);
+  //printLista();
+  sem_post(sem);
 }
 
 // print the list
 void printLista(){
     LLNode* curr = sentinela;
-    curr = (curr->next);
+    //printNode(sentinela);
+    curr = getNode(curr->next);
 
     printf("lista :");
     while (curr != NULL){
         printf(" %d ->", curr->val);
-        curr = (curr->next);
+        curr = getNode(curr->next);
     }
 
     printf(" NULL\n\n");
 }
 
-void* experiment(void* arg){
+void* experiment(void* arg, int tid){
   /* Garante thread id unico para a threads */
-  sem_wait(&sem);
-  int tid = gtid++;
-  sem_post(&sem);
+  printf("tid = %d\n", tid);
 
-  //printf("tid = %d\n", tid);
-  int result, val, i;
+  int result, val, i, done;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
   l_ops = l_lookups_true = l_lookups_false = l_inserts = l_removes = 0;
@@ -276,10 +297,13 @@ void* experiment(void* arg){
       }
       else if (action < insertPct) {
         printf("%d -> insert %d\n", tid, val);
-        insert(val);
-        if(val > 50)
-            removeNode(val);
-        l_inserts++;
+        insert(val, &done);
+        if(val > 500){
+          printf("%d -> remove %d\n", tid, val);
+          removeNode(val);
+        }
+        if(done)
+          l_inserts++;
       }
       else {
         printf("%d -> remove %d\n", tid, val);
@@ -307,8 +331,10 @@ void* experiment(void* arg){
           l_lookups_false++;
       }
       else if (action < insertPct) {
-        insert(val);
-        l_inserts++;
+        printf("%d -> insert %d\n", tid, val);
+        insert(val, &done);
+        if(done)
+          l_inserts++;
       }
       else {
         removeNode(val);
@@ -318,20 +344,20 @@ void* experiment(void* arg){
       //int sane = isSane();
       l_ops++;
 
-      if(tid == 0){
-        clock_gettime(CLOCK_MONOTONIC, &tend);
-        timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
-      }
+      clock_gettime(CLOCK_MONOTONIC, &tend);
+      timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
     }
   }
 
-  sem_wait(&sem);
-  count_ops += l_ops;
-  inserts += l_inserts;
-  lookups_true += l_lookups_true;
-  lookups_false += l_lookups_false;
-  removes += l_removes;
-  sem_post(&sem);
+  sem_wait(sem);
+  stats->count_ops += l_ops;
+  stats->inserts += l_inserts;
+  stats->lookups_true += l_lookups_true;
+  stats->lookups_false += l_lookups_false;
+  stats->removes += l_removes;
+  sem_post(sem);
+
+  exit(0);
 }
 
 /* Checa se os parametros são validos, aborta caso não sejam */
@@ -357,6 +383,14 @@ void checkData(){
   }
 }
 
+void printNode(LLNode* node){
+  printf("Dados do nó\n");
+  printf("ID: %d\n", node->id);
+  printf("VAL: %d\n", node->val);
+  printf("NEXT: %d\n", node->next);
+
+}
+
 void printInfo(){
   printf("\nNúmero de threads = %d", n_threads);
   if(num_ops > 0){
@@ -375,7 +409,7 @@ void printInfo(){
 }
 
 int main(int argc, char *argv[]) {
-  int i;
+  int i, done, pid = 0, id = -1;
   printf("\nLinked List - versão sem\n");
 
 	getArgs(argc, argv);
@@ -384,10 +418,7 @@ int main(int argc, char *argv[]) {
 
   /* Inicializa a lista criando a sentinela */
   sentinela = malloc(sizeof(LLNode));
-  sentinela->val = -1;
-  sentinela->next = NULL;
 
-  sem_init(&sem, 0, 1);
 
   pthread_t threads[n_threads];
   void* pth_status;
@@ -396,7 +427,10 @@ int main(int argc, char *argv[]) {
   // warmup inserts half of the elements in the datasetsize
   if(doWarmup){
       for (i = 0; i < datasetsize; i+=2) {
-        insert(i);
+        insert(i, &done);
+        if(!done)
+        printf("Parando warmup, número máximo de nós atingido\n");
+          break;
       }
   }
 
@@ -406,29 +440,64 @@ int main(int argc, char *argv[]) {
   /* SHM */
   printf("\n\n\t--- Rodando experimentos ---\n");
 
-  createShMem(1000); //1000 é o número de nós máximo
+  sh_mem_adds.ctrl_add = createShMem(1000); //1000 é o número de nós máximo
+
+  getMemAdds(0);
+  stats = sh_mem_adds.stats_add;
+
+  sem = sem_open(SNAME, O_CREAT, 0644, 1);
+
+  sentinela = shAlloc(&id);
+  sentinela->val = -1;
+  sentinela->next = -1;
+  sentinela->id = id;
 
   //FORK
+  for(i = 0; i < n_threads; i++){
+    pid = fork();
+    if(pid == -1){
+      printf("Erro ao criar processo, abortando\n");
+      exit(1);
+    }
+    else if(!pid){
+      break;
+    }
+    else{
+      printf("Filho %d criado\n", pid);
+    }
+  }
 
-  //A partir daqui todos o processos executam isso
-  getMemAdds();
-  sentinela = sh_mem_adds.node_mem_add;
+  if(!pid){
+    printf("Iniciando processo filho\n");
+    //A partir daqui todos o processos executam isso
+    sh_mem_adds.ctrl_add = NULL;
+    sh_mem_adds.free_list_add = NULL;
+    sh_mem_adds.node_mem_add = NULL;
+    sh_mem_adds.stats_add = NULL;
 
-  sh_mem_adds.ctrl_add = NULL;
-  sh_mem_adds.free_list_add = NULL;
-  sh_mem_adds.node_mem_add = NULL;
+    getMemAdds(1);
 
-  experiment(NULL);
+    stats = sh_mem_adds.stats_add;
+    sem = sem_open(SNAME, 0);
+
+    //printf("%d %d\n", getpid(), sh_mem_adds.node_mem_add);
+    //printNode(sentinela);
+
+    experiment(NULL, getpid());
+  }
+  else{
+    printf("Pai esperando\n");
+    for(int i = 0; i < n_threads; i++){
+      waitpid(-1, NULL, 0);
+    }
+    printf("Pai terminou\n");
+  }
 
   //FORK "join"
 
-
-  //TODO estatísticas ainda não estão na memória compartilhada, apenas os nós e
-  //dados referentes a SH. Após a implementação do fork/join o funcionamento básico
-  //*irá funcionar*, faltando os dados estatísticos
   /* SHM_END */
 
-  /* TRHEAD (Remover quando inserir o fork)*/
+  /* TRHEAD (Remover quando inserir o fork)
   printf("\n\n\t--- Rodando experimentos ---\n");
   for(i = 0; i < n_threads; i++){
 		pthread_create(&threads[i], NULL, experiment, NULL);
@@ -454,11 +523,11 @@ int main(int argc, char *argv[]) {
     printf("Failed! Isn't sane!\n");
 
   printf("Tempo de execução dos experimentos = %lf segundos\n", timeDiff);
-  printf("Total de operações realizadas = %d\n",count_ops);
-  printf("Total de lookups acertados: %d\n", lookups_true);
-  printf("Total de lookups falhados: %d\n", lookups_false);
-  printf("Total de Inserts: %d\n", inserts);
-  printf("Total de removes: %d\n", removes);
+  printf("Total de operações realizadas = %d\n",stats->count_ops);
+  printf("Total de lookups acertados: %d\n", stats->lookups_true);
+  printf("Total de lookups falhados: %d\n", stats->lookups_false);
+  printf("Total de Inserts: %d\n", stats->inserts);
+  printf("Total de removes: %d\n", stats->removes);
 
   return 0;
 }

@@ -5,10 +5,7 @@
 
 #include "SharedMemoryController.h"
 
-extern int mem_ctrl_id;
-extern sh_mem_add_t sh_mem_adds;
-
-void createShMem(int n_nodes){
+sh_mem_t* createShMem(int n_nodes){
 	sh_mem_t* ctrl;
 
 	//Cria a estrutura controladora da memória
@@ -16,33 +13,39 @@ void createShMem(int n_nodes){
 		printf("Falha ao criar estrutura de memória compartilhada\n");
 		exit(1);
 	}
-	shmctl(mem_ctrl_id, IPC_RMID, (struct shmid_ds *) NULL);
 
 	if ((ctrl = shmat(mem_ctrl_id, NULL, 0)) == (void*) -1){
-		printf("Falha ao ler estrutura de memória compartilhada\n");
+		printf("Falha ao ler estrutura de memória compartilhada na criação\n");
 		exit(1);
 	}
+	shmctl(mem_ctrl_id, IPC_RMID, (struct shmid_ds *) NULL);
 
 	ctrl->n_nodes = n_nodes;
 
 	//Cria a memória especificada
-	if (ctrl->node_mem_shmid = shmget(IPC_PRIVATE, (sizeof(LLNode) * n_nodes), (SHM_R | SHM_W)) < 0){
+	if ((ctrl->node_mem_shmid = shmget(IPC_PRIVATE, (sizeof(LLNode) * n_nodes), (SHM_R | SHM_W))) < 0){
 		printf("Falha ao criar memória compartilhada de nós\n");
 		exit(1);
 	}
-	shmctl(ctrl->node_mem_shmid, IPC_RMID, (struct shmid_ds *) NULL);
 
 	ctrl->mem_ptr = 0;
 
 	//Cria lista de endereços de memória livres
-	if (ctrl->free_list_shmid = shmget(IPC_PRIVATE, (sizeof(free_id_t) * n_nodes), (SHM_R | SHM_W)) < 0){
+	if ((ctrl->free_list_shmid = shmget(IPC_PRIVATE, (sizeof(free_id_t) * n_nodes), (SHM_R | SHM_W))) < 0){
 		printf("Falha ao criar lista de memória livre\n");
 		exit(1);
 	}
-	shmctl(ctrl->free_list_shmid, IPC_RMID, (struct shmid_ds *) NULL);
+
+	//Cria estrutura para estatísticas
+	if ((ctrl->stats_shmid = shmget(IPC_PRIVATE, sizeof(stats_t), (SHM_R | SHM_W))) < 0){
+		printf("Falha ao criar estrutura para estatísticas\n");
+		exit(1);
+	}
 
 	ctrl->free_list_size = 0;
 	ctrl->next_free_id = -1;
+
+	return ctrl;
 }
 
 LLNode* shAlloc(int* id){
@@ -90,6 +93,12 @@ LLNode* shAlloc(int* id){
 	return node;
 }
 
+LLNode* getNode(int id){
+	if(id == -1)
+		return NULL;
+	return (sh_mem_adds.node_mem_add + id);
+}
+
 void shFree(int id){
 	void* mem;
 	sh_mem_t* ctrl;
@@ -104,20 +113,37 @@ void shFree(int id){
 	ctrl->free_list_size++;
 }
 
-void getMemAdds(){
-	if((sh_mem_adds.ctrl_add = shmat(mem_ctrl_id, NULL, 0)) == (void*) -1){
-		printf("Falha ao ler estrutura de memória compartilhada\n");
-		exit(1);
+void getMemAdds(int ct){
+	sh_mem_t* ctrl;
+
+	if(ct){
+		if((sh_mem_adds.ctrl_add = shmat(mem_ctrl_id, NULL, 0)) == (void*) -1){
+			printf("Falha ao ler estrutura de memória compartilhada\n");
+			exit(1);
+		}
+		shmctl(mem_ctrl_id, IPC_RMID, (struct shmid_ds *) NULL);
 	}
-	if((sh_mem_adds.free_list_add = shmat(sh_mem_adds.ctrl_add->free_list_shmid,
+	ctrl = sh_mem_adds.ctrl_add;
+
+
+	if((sh_mem_adds.free_list_add = shmat(ctrl->free_list_shmid,
 																				NULL, 0)) == (void*) -1){
-		printf("Falha ao ler lista de memória livre\n");
+		printf("Falha ao ler lista de memória livre, id: %d\n", ctrl->free_list_shmid);
 		exit(1);
 	}
-	if((sh_mem_adds.node_mem_add = shmat(sh_mem_adds.ctrl_add->node_mem_shmid,
+	shmctl(ctrl->free_list_shmid, IPC_RMID, (struct shmid_ds *) NULL);
+
+	if((sh_mem_adds.node_mem_add = shmat(ctrl->node_mem_shmid,
 																			 NULL, 0)) == (void*) -1){
 		printf("Falha ao ler memória compartilhada de nós\n");
 		exit(1);
 	}
+	shmctl(ctrl->node_mem_shmid, IPC_RMID, (struct shmid_ds *) NULL);
 
+	if((sh_mem_adds.stats_add = shmat(ctrl->stats_shmid,
+																			 NULL, 0)) == (void*) -1){
+		printf("Falha ao ler estrutura de estatísticas\n");
+		exit(1);
+	}
+	shmctl(ctrl->stats_shmid, IPC_RMID, (struct shmid_ds *) NULL);
 }
