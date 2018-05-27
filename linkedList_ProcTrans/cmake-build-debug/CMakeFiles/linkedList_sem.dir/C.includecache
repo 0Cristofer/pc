@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/cristofer/Downloads/pc/pc/linkedList_sem/LinkedList.c
+stdio.h
+-
+stdlib.h
+-
+getopt.h
+-
+time.h
+-
+pthread.h
+-
+semaphore.h
+-
+
