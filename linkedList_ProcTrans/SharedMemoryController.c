@@ -48,7 +48,7 @@ sh_mem_t* createShMem(int n_nodes){
 	return ctrl;
 }
 
-LLNode* shAlloc(int* id){
+__attribute__((transaction_safe)) LLNode* shAlloc(int* id){
 	static int next_id = 0;
 
 	int mem_id = -1;
@@ -93,13 +93,13 @@ LLNode* shAlloc(int* id){
 	return node;
 }
 
-LLNode* getNode(int id){
+__attribute__((transaction_safe)) LLNode* getNode(int id){
 	if(id == -1)
 		return NULL;
 	return (sh_mem_adds.node_mem_add + id);
 }
 
-void shFree(int id){
+__attribute__((transaction_safe)) void shFree(int id){
 	void* mem;
 	sh_mem_t* ctrl;
 
