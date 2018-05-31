@@ -1,5 +1,5 @@
 all:
-	gcc *.c -pthread -lm -o LinkedList_mutex
+	gcc *.c -pthread -lm -o LinkedList_sem
 
 clean:
-	rm LinkedList_mutex
+	rm LinkedList_sem

@@ -1,0 +1,26 @@
+Controle do progresso do trabalho
+
+
+--- BARNES ---
+Entrada certa: nbody = 4194304
+Entrada teste: nbody = 16384
+
+Sequencial -> Passando
+Mutex -> Bug: COMPUTETIME ERRADO
+Spin -> Passando
+Semaforo -> Passando
+transação -> Passando
+TBB ->
+Processos + semaforo ->
+Processos + transação ->
+
+
+--- LINKED LIST ---
+Sequencial -> Passando
+Mutex -> Passando
+Spin -> Passando
+Semaforo -> Passando
+transação -> Passando
+TBB ->
+Processos + semaforo ->
+Processos + transação ->

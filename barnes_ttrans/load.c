@@ -28,14 +28,14 @@ extern pthread_t PThreadTable[];
 #include "defs.h"
 
 bool intcoord();
-cellptr makecell(unsigned int ProcessId);
-leafptr makeleaf(unsigned int ProcessId);
+__attribute__((transaction_safe)) cellptr makecell(unsigned int ProcessId);
+__attribute__((transaction_safe)) leafptr makeleaf(unsigned int ProcessId);
 
-cellptr SubdivideLeaf(leafptr le, cellptr parent, unsigned int l,
+__attribute__((transaction_safe)) cellptr SubdivideLeaf(leafptr le, cellptr parent, unsigned int l,
 		      						unsigned int ProcessId);
 
-cellptr InitCell(cellptr parent, unsigned int ProcessId);
-leafptr InitLeaf(cellptr parent, unsigned int ProcessId);
+__attribute__((transaction_safe)) cellptr InitCell(cellptr parent, unsigned int ProcessId);
+__attribute__((transaction_safe)) leafptr InitLeaf(cellptr parent, unsigned int ProcessId);
 nodeptr loadtree(bodyptr p, cellptr root, unsigned int ProcessId);
 
 /*
@@ -60,10 +60,12 @@ maketree(unsigned ProcessId){
 				ProcessId);
 			}
 			else {
-				__transaction_atomic{
+				/*__transaction_atomic{
 					fprintf(stderr, "Process %d found body %d to have zero mass\n",
 					ProcessId, (int) p);
-				}
+				}*/
+				fprintf(stderr, "Process %d found body %d to have zero mass\n",
+				ProcessId, (int) p);
 			}
 		}
 
@@ -185,7 +187,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 	int i, j, root_level;
 	bool valid_root;
 	int kidIndex;
-	volatile nodeptr *volatile qptr, mynode;
+	nodeptr* qptr, mynode;
 	cellptr c;
 	leafptr le;
 
@@ -510,8 +512,8 @@ cellptr makecell(unsigned ProcessId){
 	int i, Mycell;
 
 	if (Local[ProcessId].mynumcell == maxmycell) {
-		error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
-		ProcessId,maxmycell);
+		/*error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
+		ProcessId,maxmycell);*/
 	}
 
 	Mycell = Local[ProcessId].mynumcell++;
@@ -538,8 +540,8 @@ leafptr makeleaf(unsigned ProcessId){
 	int i, Myleaf;
 
 	if (Local[ProcessId].mynumleaf == maxmyleaf) {
-		error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
-		ProcessId,maxmyleaf);
+		/*error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
+		ProcessId,maxmyleaf);*/
 	}
 
 	Myleaf = Local[ProcessId].mynumleaf++;

@@ -33,6 +33,7 @@ static int removes = 0;
 static int datasetsize = 256;                  // number of items
 static double duration = 5.0f;                 // in seconds
 static int doWarmup = FALSE;
+static int verbose = FALSE;
 static int num_ops = 0;                        // number of operations mode value.
 static int count_ops = 0;
 
@@ -63,6 +64,7 @@ void help(int msg){
   printf("\n\tt : Tempo de duração da execução (segundos) [5.0]");
   printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
   printf("\n\tx : Muda para o modo de execução por número de operações.");
+  printf("\n\tv : Ativa o modo verbose.");
   printf("\n\th : Mostra essa mensagem\n\n");
 	exit(1);
 }
@@ -76,10 +78,11 @@ void getArgs(int argc, char *argv[]){
     {"size", 1, NULL, 's'},
     {"time", 1, NULL, 't'},
     {"warmup", 0, NULL, 'w'},
+    {"verbose", 0, NULL, 'v'},
     {"x", 1, NULL, 'x'}
 	};
 
-	while ((op = getopt_long(argc, argv, "s:t:wx:h", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "s:t:wvx:h", longopts, NULL)) != -1) {
 		switch (op) {
 			case 's':
 				datasetsize = atoi(optarg);
@@ -91,6 +94,10 @@ void getArgs(int argc, char *argv[]){
 
       case 'w':
         doWarmup = TRUE;
+        break;
+
+      case 'v':
+        verbose = TRUE;
         break;
 
       case 'x':
@@ -239,8 +246,12 @@ void printLista(){
 }
 
 void printInfo(){
-  printf("\nDuração = %.2lf segundos", duration);
-  printf("\nTamanho máximo da fila = %d nodes", datasetsize);
+  if(num_ops != 0)
+    printf("\nModo número de operações = %d operações", num_ops);
+  else
+    printf("\nModo tempo de execução = %.2lf segundos", duration);
+
+  printf("\nTamanho máximo da lista = %d nodes", datasetsize);
   printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
             lookupPct, insertPct - lookupPct, 1.0f - insertPct);
 
@@ -255,13 +266,11 @@ void experiment(){
     int result;
 
     float action = (rand()%100) / 100.0;
-    int val = rand()%1000;
+    int val = rand()%datasetsize;
 
     //printf("\nAction = %f | val = %d\n", action, val);
 
     if (action < lookupPct) {
-      //printf("Lookup\n");
-
       p->in = val;
       lookup(p);
       result = p->out;
@@ -270,14 +279,16 @@ void experiment(){
         lookups_true++;
       else
         lookups_false++;
+
+      if(verbose) printf("Lookup %d -> %d \n", val, result);
     }
     else if (action < insertPct) {
-      printf("Insert: %d\n", val);
+      if(verbose) printf("Insert: %d\n", val);
       insert(val);
       inserts++;
     }
     else {
-        printf("Remove: %d\n", val);
+        if(verbose) printf("Remove: %d\n", val);
         removeNode(val);
         removes++;
     }

@@ -35,13 +35,14 @@ static int removes = 0;
 static int datasetsize = 256;                  // number of items
 static double duration = 5.0f;                 // in seconds
 static int doWarmup = FALSE;
+static int verbose = FALSE;
 static int num_ops = 0;                        // number of operations mode value.
 static int count_ops = 0;
 static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
-static float lookupPct = 0.30f;
-static float insertPct = 0.81f;
+static float lookupPct = 0.34f;
+static float insertPct = 0.67f;
 
 // Controla o tempo de execução
 struct timespec tstart, tend;
@@ -68,6 +69,7 @@ void help(int msg){
 	printf("\n\ts : Tamanho do datasetsize [256]");
   printf("\n\tt : Tempo de duração da execução (segundos) [5.0]");
   printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
+  printf("\n\tv : Ativa o modo verbose.");
   printf("\n\tx : Muda para o modo de execução por número de operações.");
   printf("\n\th : Mostra essa mensagem\n\n");
 	exit(1);
@@ -83,10 +85,11 @@ void getArgs(int argc, char *argv[]){
     {"size", 1, NULL, 's'},
     {"time", 1, NULL, 't'},
     {"warmup", 0, NULL, 'w'},
+    {"verbose", 0, NULL, 'v'},
     {"x", 1, NULL, 'x'}
 	};
 
-	while ((op = getopt_long(argc, argv, "n:s:t:wx:h", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "n:s:t:wvx:h", longopts, NULL)) != -1) {
 		switch (op) {
       case 'n':
         n_threads = atoi(optarg);
@@ -102,6 +105,10 @@ void getArgs(int argc, char *argv[]){
 
       case 'w':
         doWarmup = TRUE;
+        break;
+
+      case 'v':
+        verbose = TRUE;
         break;
 
       case 'x':
@@ -261,10 +268,9 @@ void* experiment(void* arg){
   if(num_ops != 0){
     for(i = 0; i < num_ops / n_threads; i++){
       action = (rand()%100) / 100.0;
-      val = rand() % 1000;
+      val = rand() % datasetsize;
 
       if (action < lookupPct) {
-        printf("%d -> lookup\n", tid);
         p->in = val;
         lookup(p);
         result = p->out;
@@ -273,16 +279,16 @@ void* experiment(void* arg){
           l_lookups_true++;
         else
           l_lookups_false++;
+
+        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%d -> insert %d\n", tid, val);
         insert(val);
-        if(val > 50)
-            removeNode(val);
         l_inserts++;
       }
       else {
-        printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%d -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -295,7 +301,7 @@ void* experiment(void* arg){
     //printf("%d Entrou time duration mode\n",tid);
     while(timeDiff < duration){
       action = (rand()%100) / 100.0;
-      val = rand() % 1000;
+      val = rand() % datasetsize;
       if (action < lookupPct) {
         p->in = val;
         lookup(p);
@@ -305,12 +311,17 @@ void* experiment(void* arg){
           l_lookups_true++;
         else
           l_lookups_false++;
+
+        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
+        if(verbose) printf("%d -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
+
       }
       else {
+        if(verbose) printf("%d -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -359,11 +370,10 @@ void checkData(){
 
 void printInfo(){
   printf("\nNúmero de threads = %d", n_threads);
-  if(num_ops > 0){
-    printf("\nNúmero de operações = %d", num_ops);
-  } else {
-    printf("\nDuração = %2.lf segundos", duration);
-  }
+  if(num_ops != 0)
+    printf("\nModo número de operações = %d operações", num_ops);
+  else
+    printf("\nModo tempo de execução = %.2lf segundos", duration);
   printf("\nTamanho máximo da fila = %d nodes", datasetsize);
   printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
             lookupPct, insertPct - lookupPct, 1.0f - insertPct);

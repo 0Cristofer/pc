@@ -1,5 +1,5 @@
 all:
-	gcc *.c -pthread -lm -o LinkedList_mutex
+	gcc *.c -pthread -fgnu-tm -lm -o LinkedList_trans
 
 clean:
-	rm LinkedList_mutex
+	rm LinkedList_trans
