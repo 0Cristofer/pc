@@ -42,16 +42,16 @@ inputdata (){
   bodyptr p;
   int i;
 
-  fprintf(stderr,"reading input file : %s\n",infile);
+  fprintf(stderr,"reading input file : %s\n",globalDefs->infile);
   fflush(stderr);
-  instr = fopen(infile, "r");
+  instr = fopen(globalDefs->infile, "r");
   if (instr == NULL)
-  error2("inputdata: cannot find file %s\n", infile);
-  sprintf(headbuf, "Hack code: input file %s\n", infile);
-  headline = headbuf;
-  in_int(instr, &nbody);
-  if (nbody < 1)
-  error2("inputdata: nbody = %d is absurd\n", nbody);
+  error2("inputdata: cannot find file %s\n", globalDefs->infile);
+  sprintf(headbuf, "Hack code: input file %s\n", globalDefs->infile);
+  globalDefs->headline = headbuf;
+  in_int(instr, &globalDefs->nbody);
+  if (globalDefs->nbody < 1)
+  error2("inputdata: nbody = %d is absurd\n", globalDefs->nbody);
   in_int(instr, &ndim);
   if (ndim != NDIM)
   error3("inputdata: NDIM = %d ndim = %d is absurd\n", NDIM,ndim);
@@ -59,20 +59,22 @@ inputdata (){
   for (i = 0; i < MAX_PROC; i++) {
     Local[i].tnow = tnow;
   }
-  bodytab = (bodyptr) malloc(nbody * sizeof(body));;
-  if (bodytab == NULL)
+
+  globalDefs->bodytab = (bodyptr) malloc(globalDefs->nbody * sizeof(body));;
+
+  if (globalDefs->bodytab == NULL)
   error1("inputdata: not enuf memory\n");
-  for (p = bodytab; p < bodytab+nbody; p++) {
+  for (p = globalDefs->bodytab; p < globalDefs->bodytab+globalDefs->nbody; p++) {
     Type(p) = BODY;
     Cost(p) = 1;
     Phi(p) = 0.0;
     CLRV(Acc(p));
   }
-  for (p = bodytab; p < bodytab+nbody; p++)
+  for (p = globalDefs->bodytab; p < globalDefs->bodytab+globalDefs->nbody; p++)
   in_real(instr, &Mass(p));
-  for (p = bodytab; p < bodytab+nbody; p++)
+  for (p = globalDefs->bodytab; p < globalDefs->bodytab+globalDefs->nbody; p++)
   in_vector(instr, Pos(p));
-  for (p = bodytab; p < bodytab+nbody; p++)
+  for (p = globalDefs->bodytab; p < globalDefs->bodytab+globalDefs->nbody; p++)
   in_vector(instr, Vel(p));
   fclose(instr);
 }
@@ -81,11 +83,11 @@ inputdata (){
  * INITOUTPUT: initialize output routines.
  */
 initoutput(){
-  printf("\n\t\t%s\n\n", headline);
+  printf("\n\t\t%s\n\n", globalDefs->headline);
   printf("%10s%10s%10s%10s%10s%10s%10s%10s\n",
   "nbody", "dtime", "eps", "tol", "dtout", "tstop","fcells","NPROC");
   printf("%10d%10.5f%10.4f%10.2f%10.3f%10.3f%10.2f%10d\n\n",
-  nbody, dtime, eps, tol, dtout, tstop, fcells, NPROC);
+  globalDefs->nbody, globalDefs->dtime, globalDefs->eps, globalDefs->tol, globalDefs->dtout, globalDefs->tstop, globalDefs->fcells, globalDefs->NPROC);
 }
 
 /*
@@ -98,8 +100,8 @@ void output (unsigned int ProcessId){
   bodyptr p, *pp;
   vector tempv1,tempv2;
 
-  if ((Local[ProcessId].tout - 0.01 * dtime) <= Local[ProcessId].tnow) {
-    Local[ProcessId].tout += dtout;
+  if ((Local[ProcessId].tout - 0.01 * globalDefs->dtime) <= Local[ProcessId].tnow) {
+    Local[ProcessId].tout += globalDefs->dtout;
   }
 
   diagnostics(ProcessId);
@@ -135,14 +137,14 @@ void output (unsigned int ProcessId){
 
     sem_wait(&(Global->Baraccel).sem_count);
 
-    if((Global->Baraccel).counter == (NPROC - 1)){
+    if((Global->Baraccel).counter == (globalDefs->NPROC - 1)){
       /* Se entrou é a ultima thread */
       (Global->Baraccel).counter = 0;
 
       sem_post(&(Global->Baraccel).sem_count);
 
       /* Libera todas as threads*/
-      for (i = 0; i < (NPROC - 1); i++) {
+      for (i = 0; i < (globalDefs->NPROC - 1); i++) {
         sem_post(&(Global->Baraccel).sem_bar);
       }
 
@@ -158,8 +160,8 @@ void output (unsigned int ProcessId){
 
   if (ProcessId==0) {
     nttot = Global->n2bcalc + Global->nbccalc;
-    nbavg = (int) ((real) Global->n2bcalc / (real) nbody);
-    ncavg = (int) ((real) Global->nbccalc / (real) nbody);
+    nbavg = (int) ((real) Global->n2bcalc / (real) globalDefs->nbody);
+    ncavg = (int) ((real) Global->nbccalc / (real) globalDefs->nbody);
   }
 }
 

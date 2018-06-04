@@ -25,33 +25,54 @@
 
 #define PAD_SIZE (PAGE_SIZE / (sizeof(int)))
 
+global int mem_ctrl_id;
+global unsigned int ProcessId;
+
+struct shMemCtrl{
+  int gldefsid;
+  int glid;
+  int localid;
+  int btabid;
+  int ctabid;
+  int ltabid;
+  int mbodyid;
+  int mcellid;
+  int mleafid;
+  int cellid;
+};
+global struct shMemCtrl* ctrl;
+
 /* Defined by the input file */
-global string headline; 	/* message describing calculation */
-global string infile; 		/* file name for snapshot input */
-global string outfile; 		/* file name for snapshot output */
-global real dtime; 		/* timestep for leapfrog integrator */
-global real dtout; 		/* time between data outputs */
-global real tstop; 		/* time to stop calculation */
-global int nbody; 		/* number of bodies in system */
-global real fcells; 		/* ratio of cells/leaves allocated */
-global real fleaves; 		/* ratio of leaves/bodies allocated */
-global real tol; 		/* accuracy parameter: 0.0 => exact */
-global real tolsq; 		/* square of previous */
-global real eps; 		/* potential softening parameter */
-global real epssq; 		/* square of previous */
-global real dthf; 		/* half time step */
-global int NPROC; 		/* Number of Processors */
+struct GlobalDefs{
+  string headline; 	/* message describing calculation */
+  string infile; 		/* file name for snapshot input */
+  string outfile; 		/* file name for snapshot output */
+  real dtime; 		/* timestep for leapfrog integrator */
+  real dtout; 		/* time between data outputs */
+  real tstop; 		/* time to stop calculation */
+  int nbody; 		/* number of bodies in system */
+  real fcells; 		/* ratio of cells/leaves allocated */
+  real fleaves; 		/* ratio of leaves/bodies allocated */
+  real tol; 		/* accuracy parameter: 0.0 => exact */
+  real tolsq; 		/* square of previous */
+  real eps; 		/* potential softening parameter */
+  real epssq; 		/* square of previous */
+  real dthf; 		/* half time step */
+  int NPROC; 		/* Number of Processors */
 
-global int maxcell;		/* max number of cells allocated */
-global int maxleaf;		/* max number of leaves allocated */
-global int maxmybody;		/* max no. of bodies allocated per processor */
-global int maxmycell;		/* max num. of cells to be allocated */
-global int maxmyleaf;		/* max num. of leaves to be allocated */
-global bodyptr bodytab; 	/* array size is exactly nbody bodies */
+  int maxcell;		/* max number of cells allocated */
+  int maxleaf;		/* max number of leaves allocated */
+  int maxmybody;		/* max no. of bodies allocated per processor */
+  int maxmycell;		/* max num. of cells to be allocated */
+  int maxmyleaf;		/* max num. of leaves to be allocated */
+  bodyptr bodytab; 	/* array size is exactly nbody bodies */
 
-global struct CellSemType {
-    sem_t CL[MAXLOCK];        /* locks on the cells*/
-} *CellSem;
+  struct CellSemType {
+      sem_t CL[MAXLOCK];        /* locks on the cells*/
+  } *CellSem;
+};
+global struct GlobalDefs* globalDefs;
+
 
 struct GlobalMemory  {	/* all this info is for the whole system */
     int n2bcalc;       /* total number of body/cell interactions  */
@@ -72,52 +93,54 @@ struct GlobalMemory  {	/* all this info is for the whole system */
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Barstart);
    /* barrier at the beginning of stepsystem  */
 
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Bartree);
     /* barrier after loading the tree          */
 
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Barcom);
      /* barrier after computing the c. of m.    */
 
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Barload);
 
 
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Baraccel);
    /* barrier after accel and before output   */
 
 struct {
 	unsigned long	counter;
 	unsigned long	cycle;
-  sem_t* sem_count;
-  sem_t* sem_bar;
+  sem_t sem_count;
+  sem_t sem_bar;
 } (Barpos);
     /* barrier after computing the new pos     */
-    sem_t* CountSem; /* Lock on the shared variables            */
-    sem_t* io_sem;
+    sem_t CountSem; /* Lock on the shared variables            */
+    sem_t NcellSem; /* Lock on the counter of array of cells for loadtree */
+    sem_t NleafSem;/* Lock on the counter of array of leaves for loadtree */
+    sem_t io_sem;
     unsigned long createstart,createend,computestart,computeend;
     unsigned long trackstart, trackend, tracktime;
     unsigned long partitionstart, partitionend, partitiontime;
@@ -180,6 +203,6 @@ struct local_memory {
 
    int pad_end[PAD_SIZE];
 };
-global struct local_memory Local;
+global struct local_memory* Local;
 
 #endif

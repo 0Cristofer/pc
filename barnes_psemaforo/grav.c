@@ -69,7 +69,7 @@ int level;
     DOTVP(Local[ProcessId].drsq, Local[ProcessId].dr, Local[ProcessId].dr);
   }
 
-  Local[ProcessId].drsq += epssq;
+  Local[ProcessId].drsq += globalDefs->epssq;
   drabs = sqrt((double) Local[ProcessId].drsq);
   phii = Mass(p) / drabs;
   Local[ProcessId].phi0 -= phii;
@@ -152,5 +152,5 @@ walksub(nodeptr n, real dsq, unsigned ProcessId){
    DOTVP(Local[ProcessId].drsq, Local[ProcessId].dr, Local[ProcessId].dr);
    Local[ProcessId].pmem = p;
 
-   return (tolsq * Local[ProcessId].drsq < dsq);
+   return (globalDefs->tolsq * Local[ProcessId].drsq < dsq);
  }

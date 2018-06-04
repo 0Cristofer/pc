@@ -75,7 +75,7 @@ maketree(unsigned ProcessId){
 
 			sem_wait(&(Global->Bartree).sem_count);
 
-	    if((Global->Bartree).counter == (NPROC - 1)){
+	    if((Global->Bartree).counter == (globalDefs->NPROC - 1)){
 	      /* Se entrou é a ultima thread */
 	      (Global->Bartree).counter = 0;
 				//printf("Bartree\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
@@ -83,7 +83,7 @@ maketree(unsigned ProcessId){
 	      sem_post(&(Global->Bartree).sem_count);
 
 	      /* Libera todas as threads*/
-	      for (i = 0; i < (NPROC - 1); i++) {
+	      for (i = 0; i < (globalDefs->NPROC - 1); i++) {
 	        sem_post(&(Global->Bartree).sem_bar);
 	      }
 
@@ -107,14 +107,14 @@ maketree(unsigned ProcessId){
 
 			sem_wait(&(Global->Barcom).sem_count);
 
-	    if((Global->Barcom).counter == (NPROC - 1)){
+	    if((Global->Barcom).counter == (globalDefs->NPROC - 1)){
 	      /* Se entrou é a ultima thread */
 	      (Global->Barcom).counter = 0;
 
 	      sem_post(&(Global->Barcom).sem_count);
 
 	      /* Libera todas as threads*/
-	      for (i = 0; i < (NPROC - 1); i++) {
+	      for (i = 0; i < (globalDefs->NPROC - 1); i++) {
 	        sem_post(&(Global->Barcom).sem_bar);
 	      }
 
@@ -218,7 +218,7 @@ void printtree (nodeptr n){
 		for (k = 0; k < l->num_bodies; k++) {
 			p = Bodyp(l)[k];
 			printf("Body #%2d: Num = %2d, Level = %o, ",
-			p - bodytab, k, Level(p));
+			p - globalDefs->bodytab, k, Level(p));
 			PRTV("Pos",Pos(p));
 			printf("\n");
 		}
@@ -283,7 +283,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				}
 
 				if (!valid_root) {
-					printf("P%d body %d\n", ProcessId, p - bodytab);
+					printf("P%d body %d\n", ProcessId, p - globalDefs->bodytab);
 					root = Global->G_root;
 				}
 			}
@@ -306,7 +306,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 		if (*qptr == NULL) {
 			/* lock the parent cell */
 			/* IMPLEMENTAÇÃO SEMAFOROS */
-			sem_wait(&CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]);
+			sem_wait(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 			if (*qptr == NULL) {
 				le = InitLeaf((cellptr) mynode, ProcessId);
 				Parent(p) = (nodeptr) le;
@@ -317,12 +317,12 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				*qptr = (nodeptr) le;
 				flag = FALSE;
 			}
-			sem_post(&CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]);
+			sem_post(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 		}
 
 		if (flag && *qptr && (Type(*qptr) == LEAF)) {
 			/*   reached a "leaf"?      */
-			sem_wait(&CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]);
+			sem_wait(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 
 			/* lock the parent cell */
 			if (Type(*qptr) == LEAF){             /* still a "leaf"?      */
@@ -338,7 +338,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				}
 			}
 
-			sem_post(&CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]);
+			sem_post(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 		}
 
 		if (flag) {
@@ -563,14 +563,14 @@ cellptr makecell(unsigned ProcessId){
 	cellptr c;
 	int i, Mycell;
 
-	if (Local[ProcessId].mynumcell == maxmycell) {
+	if (Local[ProcessId].mynumcell == globalDefs->maxmycell) {
 		error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
-		ProcessId,maxmycell);
+		ProcessId,globalDefs->maxmycell);
 	}
 
 	Mycell = Local[ProcessId].mynumcell++;
 	c = Local[ProcessId].ctab + Mycell;
-	c->seqnum = ProcessId*maxmycell+Mycell;
+	c->seqnum = ProcessId*globalDefs->maxmycell+Mycell;
 	Type(c) = CELL;
 	Done(c) = FALSE;
 	Mass(c) = 0.0;
@@ -591,14 +591,14 @@ leafptr makeleaf(unsigned ProcessId){
 	leafptr le;
 	int i, Myleaf;
 
-	if (Local[ProcessId].mynumleaf == maxmyleaf) {
+	if (Local[ProcessId].mynumleaf == globalDefs->maxmyleaf) {
 		error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
-		ProcessId,maxmyleaf);
+		ProcessId,globalDefs->maxmyleaf);
 	}
 
 	Myleaf = Local[ProcessId].mynumleaf++;
 	le = Local[ProcessId].ltab + Myleaf;
-	le->seqnum = ProcessId * maxmyleaf + Myleaf;
+	le->seqnum = ProcessId * globalDefs->maxmyleaf + Myleaf;
 	Type(le) = LEAF;
 	Done(le) = FALSE;
 	Mass(le) = 0.0;
