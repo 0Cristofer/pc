@@ -42,6 +42,16 @@ sh_mem_t* createShMem(int n_nodes){
 		exit(1);
 	}
 
+	if ((ctrl->sem_id = shmget(IPC_PRIVATE, sizeof(sem_add), (SHM_R | SHM_W))) < 0){
+		printf("Falha ao criar estrutura para estatísticas\n");
+		exit(1);
+	}
+
+	if ((ctrl->shid_id = shmget(IPC_PRIVATE, sizeof(int), (SHM_R | SHM_W))) < 0){
+		printf("Falha ao criar estrutura para estatísticas\n");
+		exit(1);
+	}
+
 	ctrl->free_list_size = 0;
 	ctrl->next_free_id = -1;
 
@@ -49,8 +59,6 @@ sh_mem_t* createShMem(int n_nodes){
 }
 
 LLNode* shAlloc(int* id){
-	static int next_id = 0;
-
 	int mem_id = -1;
 	sh_mem_t* ctrl;
 	free_id_t* free_list;
@@ -72,7 +80,7 @@ LLNode* shAlloc(int* id){
 	node = sh_mem_adds.node_mem_add;
 
 	if(mem_id == -1){
-		if(next_id == ctrl->n_nodes){
+		if((*sh_mem_adds.id) == ctrl->n_nodes){
 			printf("Número máximo de nós alcançado\n");
 			*id = -1;
 
@@ -82,8 +90,8 @@ LLNode* shAlloc(int* id){
 		node = node + ctrl->mem_ptr;
 		ctrl->mem_ptr = ctrl->mem_ptr + 1;
 
-		*id = next_id;
-		next_id++;
+		*id = *sh_mem_adds.id;
+		(*sh_mem_adds.id)++;
 	}
 	else{
 		node = node + mem_id;
@@ -113,7 +121,7 @@ void shFree(int id){
 	ctrl->free_list_size++;
 }
 
-void getMemAdds(int ct){
+void getMemAdds(int ct, int set_id){
 	sh_mem_t* ctrl;
 
 	if(ct){
@@ -146,4 +154,23 @@ void getMemAdds(int ct){
 		exit(1);
 	}
 	shmctl(ctrl->stats_shmid, IPC_RMID, (struct shmid_ds *) NULL);
+
+	if((sh_mem_adds.id = shmat(ctrl->shid_id,
+																			 NULL, 0)) == (void*) -1){
+		printf("Falha ao ler estrutura de estatísticas\n");
+		exit(1);
+	}
+	shmctl(ctrl->shid_id, IPC_RMID, (struct shmid_ds *) NULL);
+
+	if(set_id){
+		(*sh_mem_adds.id) = 0;
+	}
+}
+
+void getSem(sh_mem_t* ctrl){
+	if((sem = shmat(ctrl->sem_id, NULL, 0)) == (void*) -1){
+		printf("Falha ao ler estrutura de estatísticas\n");
+		exit(1);
+	}
+	shmctl(ctrl->sem_id, IPC_RMID, (struct shmid_ds *) NULL);
 }

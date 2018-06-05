@@ -157,6 +157,8 @@ void output (unsigned int ProcessId){
       sem_wait(&(Global->Baraccel).sem_bar);
       }
   };
+  //printf("-----Liberou baraccel %d-----\n", ProcessId);
+
 
   if (ProcessId==0) {
     nttot = Global->n2bcalc + Global->nbccalc;

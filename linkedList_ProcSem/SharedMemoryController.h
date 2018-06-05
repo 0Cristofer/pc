@@ -36,6 +36,8 @@ typedef struct sh_mem_t{
   int free_list_size;
   int next_free_id;
   int stats_shmid;
+  int sem_id;
+  int shid_id;
 } sh_mem_t;
 
 typedef struct sh_mem_add_t{
@@ -43,11 +45,17 @@ typedef struct sh_mem_add_t{
   free_id_t* free_list_add;
   LLNode* node_mem_add;
   stats_t* stats_add;
+  int* id;
 } sh_mem_add_t;
+
+typedef struct sem_add{
+  sem_t sem;
+} sem_add;
 
 
 extern int mem_ctrl_id;
 extern sh_mem_add_t sh_mem_adds;
+extern sem_add* sem;
 
 sh_mem_t* createShMem(int n_nodes);
 
@@ -57,7 +65,9 @@ void shFree(int id);
 
 LLNode* getNode(int id);
 
-void getMemAdds(int ct);
+void getMemAdds(int ct, int set_id);
+
+void getSem(sh_mem_t* ctrl);
 
 void printNode(LLNode* node);
 

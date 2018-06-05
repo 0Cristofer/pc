@@ -43,6 +43,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned int ProcessId);
  */
 
 maketree(unsigned ProcessId){
+	//printf("make tree %d\n", ProcessId);
 	bodyptr p, *pp;
 
 	Local[ProcessId].myncell = 0;
@@ -66,6 +67,7 @@ maketree(unsigned ProcessId){
 				sem_post(&(Global->io_sem));
 			}
 		}
+		//printf("fim for tree %d\n", ProcessId);
 
 		{
 			unsigned long	Error, Cycle;
@@ -95,6 +97,8 @@ maketree(unsigned ProcessId){
 
 	      sem_wait(&(Global->Bartree).sem_bar);
 	      }
+				//printf("-----Liberou %d-----\n", ProcessId);
+
 		};
 
 		hackcofm( 0, ProcessId );
@@ -127,6 +131,8 @@ maketree(unsigned ProcessId){
 	      sem_wait(&(Global->Barcom).sem_bar);
 	      }
 		};
+		//printf("-----Liberou barcom %d-----\n", ProcessId);
+
 	}
 
 cellptr InitCell(cellptr parent, unsigned ProcessId){
@@ -236,6 +242,7 @@ void printtree (nodeptr n){
  */
 
 nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
+	//printf("Começando load %d\n", ProcessId);
 	int l, xq[NDIM], xp[NDIM], xor[NDIM], subindex(), flag;
 	int i, j, root_level;
 	bool valid_root;
@@ -306,7 +313,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 		if (*qptr == NULL) {
 			/* lock the parent cell */
 			/* IMPLEMENTAÇÃO SEMAFOROS */
-			sem_wait(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
+			sem_wait(&(globalDefs->CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 			if (*qptr == NULL) {
 				le = InitLeaf((cellptr) mynode, ProcessId);
 				Parent(p) = (nodeptr) le;
@@ -317,12 +324,12 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				*qptr = (nodeptr) le;
 				flag = FALSE;
 			}
-			sem_post(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
+			sem_post(&(globalDefs->CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 		}
 
 		if (flag && *qptr && (Type(*qptr) == LEAF)) {
 			/*   reached a "leaf"?      */
-			sem_wait(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
+			sem_wait(&(globalDefs->CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 
 			/* lock the parent cell */
 			if (Type(*qptr) == LEAF){             /* still a "leaf"?      */
@@ -338,7 +345,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				}
 			}
 
-			sem_post(&((globalDefs->CellSem)->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
+			sem_post(&(globalDefs->CellSem->CL[((cellptr) mynode)->seqnum % MAXLOCK]));
 		}
 
 		if (flag) {
@@ -351,6 +358,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
  }
 
  SETV(Local[ProcessId].Root_Coords, xp);
+ //printf("Fim load %d\n", ProcessId);
  return Parent((leafptr) *qptr);
 }
 

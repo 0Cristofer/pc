@@ -29,15 +29,16 @@ stats_t* stats;
 sh_mem_add_t sh_mem_adds;
 
 /* Dados globais com valores padrão */
-static int datasetsize = 256;                  // number of items
-static double duration = 5.0f;                 // in seconds
+static int datasetsize = 256;         // number of items
+static double duration = 5.0f;        // in seconds
 static int doWarmup = FALSE;
-static int num_ops = 0;                        // number of operations mode value.
+static int verbose = FALSE;
+static int num_ops = 0;               // number of operations mode value.
 static int n_threads = 2;
 
 // these three are for getting various lookup/insert/remove ratios
-static float lookupPct = 0.30f;
-static float insertPct = 0.81f;
+static float lookupPct = 0.34f;
+static float insertPct = 0.67f;
 
 // Controla o tempo de execução
 struct timespec tstart, tend;
@@ -65,6 +66,7 @@ void help(int msg){
   printf("\n\tt : Tempo de duração da execução (segundos) [5.0]");
   printf("\n\tw : Ativa o Warm Up antes da execução [FALSE]");
   printf("\n\tx : Muda para o modo de execução por número de operações.");
+  printf("\n\tv : Ativa o modo verbose.");
   printf("\n\th : Mostra essa mensagem\n\n");
 	exit(1);
 }
@@ -79,10 +81,11 @@ void getArgs(int argc, char *argv[]){
     {"size", 1, NULL, 's'},
     {"time", 1, NULL, 't'},
     {"warmup", 0, NULL, 'w'},
+    {"verbose", 0, NULL, 'v'},
     {"x", 1, NULL, 'x'}
 	};
 
-	while ((op = getopt_long(argc, argv, "n:s:t:wx:h", longopts, NULL)) != -1) {
+	while ((op = getopt_long(argc, argv, "n:s:t:wvx:h", longopts, NULL)) != -1) {
 		switch (op) {
       case 'n':
         n_threads = atoi(optarg);
@@ -98,6 +101,10 @@ void getArgs(int argc, char *argv[]){
 
       case 'w':
         doWarmup = TRUE;
+        break;
+
+      case 'v':
+        verbose = TRUE;
         break;
 
       case 'x':
@@ -265,9 +272,6 @@ void printLista(){
 }
 
 void* experiment(void* arg, int tid){
-  /* Garante thread id unico para a threads */
-  printf("tid = %d\n", tid);
-
   int result, val, i, done;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
@@ -283,10 +287,9 @@ void* experiment(void* arg, int tid){
   if(num_ops != 0){
     for(i = 0; i < num_ops / n_threads; i++){
       action = (rand()%100) / 100.0;
-      val = rand() % 1000;
+      val = rand() % datasetsize;
 
       if (action < lookupPct) {
-        printf("%d -> lookup\n", tid);
         p->in = val;
         lookup(p);
         result = p->out;
@@ -295,19 +298,17 @@ void* experiment(void* arg, int tid){
           l_lookups_true++;
         else
           l_lookups_false++;
+
+        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%d -> insert %d\n", tid, val);
         insert(val, &done);
-        if(val > 500){
-          printf("%d -> remove %d\n", tid, val);
-          removeNode(val);
-        }
         if(done)
           l_inserts++;
       }
       else {
-        printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%d -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -320,7 +321,7 @@ void* experiment(void* arg, int tid){
     //printf("%d Entrou time duration mode\n",tid);
     while(timeDiff < duration){
       action = (rand()%100) / 100.0;
-      val = rand() % 1000;
+      val = rand() % datasetsize;
       if (action < lookupPct) {
         p->in = val;
         lookup(p);
@@ -330,19 +331,21 @@ void* experiment(void* arg, int tid){
           l_lookups_true++;
         else
           l_lookups_false++;
+
+        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%d -> insert %d\n", tid, val);
         insert(val, &done);
         if(done)
           l_inserts++;
       }
       else {
+        if(verbose) printf("%d -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
 
-      //int sane = isSane();
       l_ops++;
 
       clock_gettime(CLOCK_MONOTONIC, &tend);
@@ -393,13 +396,12 @@ void printNode(LLNode* node){
 }
 
 void printInfo(){
-  printf("\nNúmero de threads = %d", n_threads);
-  if(num_ops > 0){
-    printf("\nNúmero de operações = %d", num_ops);
-  } else {
-    printf("\nDuração = %2.lf segundos", duration);
-  }
-  printf("\nTamanho máximo da fila = %d nodes", datasetsize);
+  if(num_ops != 0)
+    printf("\nModo número de operações = %d operações", num_ops);
+  else
+    printf("\nModo tempo de execução = %.2lf segundos", duration);
+
+  printf("\nTamanho máximo da lista = %d nodes", datasetsize);
   printf("\nPorcentagens das operações: %.2f Lookup / %.2f Insert / %.2f Remove",
             lookupPct, insertPct - lookupPct, 1.0f - insertPct);
 
@@ -423,17 +425,6 @@ int main(int argc, char *argv[]) {
   pthread_t threads[n_threads];
   void* pth_status;
 
-  /* Warm Up */
-  // warmup inserts half of the elements in the datasetsize
-  if(doWarmup){
-      for (i = 0; i < datasetsize; i+=2) {
-        insert(i, &done);
-        if(!done)
-        printf("Parando warmup, número máximo de nós atingido\n");
-          break;
-      }
-  }
-
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
 
@@ -442,13 +433,21 @@ int main(int argc, char *argv[]) {
 
   sh_mem_adds.ctrl_add = createShMem(1000); //1000 é o número de nós máximo
 
-  getMemAdds(0);
+  getMemAdds(0, 1);
   stats = sh_mem_adds.stats_add;
 
   sentinela = shAlloc(&id);
   sentinela->val = -1;
   sentinela->next = -1;
   sentinela->id = id;
+
+  /* Warm Up */
+  // warmup inserts half of the elements in the datasetsize
+  if(doWarmup){
+      for (i = 0; i < datasetsize; i+=2) {
+        insert(i, &done);
+      }
+  }
 
   int pids[n_threads];
 
@@ -464,19 +463,18 @@ int main(int argc, char *argv[]) {
     }
     else{
       pids[i] = pid;
-      printf("Filho %d criado\n", pid);
+      if(verbose) printf("Filho %d criado\n", pid);
     }
   }
 
   if(pid == 0){
-    printf("Iniciando processo filho\n");
     //A partir daqui todos o processos executam isso
     sh_mem_adds.ctrl_add = NULL;
     sh_mem_adds.free_list_add = NULL;
     sh_mem_adds.node_mem_add = NULL;
     sh_mem_adds.stats_add = NULL;
 
-    getMemAdds(1);
+    getMemAdds(1, 0);
 
     stats = sh_mem_adds.stats_add;
 
@@ -486,43 +484,29 @@ int main(int argc, char *argv[]) {
     experiment(NULL, getpid());
 
   } else {
-    printf("Pai esperando\n");
+    if(verbose) printf("Pai esperando\n");
 
     for(i = 0; i < n_threads; i++){
       waitpid(pids[i], NULL, NULL);
     }
 
-    printf("Pai terminou\n");
+    if(verbose) printf("Pai terminou\n");
   }
-
   //FORK "join"
-
   /* SHM_END */
-
-  /* TRHEAD (Remover quando inserir o fork)
-  printf("\n\n\t--- Rodando experimentos ---\n");
-  for(i = 0; i < n_threads; i++){
-		pthread_create(&threads[i], NULL, experiment, NULL);
-	}
-
-  //experiment(NULL);
-
-  for(i = 0; i < n_threads; i++){
-		 pthread_join(threads[i], &pth_status);
-  }
-  /* THREAD_END */
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
   timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 
   printf("\t    FIM DA EXECUÇÃO.\n");
 
-  printLista();
+  if(verbose) printLista();
+
   printf("\nSanity Check: ");
   if(isSane())
-    printf("Passed\n");
+    printf("Passou\n");
   else
-    printf("Failed! Isn't sane!\n");
+    printf("Falhou!\n");
 
   printf("Tempo de execução dos experimentos = %lf segundos\n", timeDiff);
   printf("Total de operações realizadas = %d\n",stats->count_ops);

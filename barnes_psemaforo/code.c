@@ -123,7 +123,6 @@ FILE *fopen();
 void getMemAdds(int ct, int btab, int lcl);
 
 main(int argc, string argv[]) {
-    unsigned ProcessId = 0;
     int c;
 
     while ((c = getopt(argc, argv, "h")) != -1) {
@@ -175,21 +174,15 @@ main(int argc, string argv[]) {
         else if(!pid){
           break;
         }
-        else{
-          printf("Filho %d criado\n", pid);
-        }
       }
 
       if(!pid){
-        printf("Iniciando processo filho\n");
         SlaveStart();
       }
       else{
-        printf("Pai esperando\n");
         for(i = 0; i < globalDefs->NPROC; i++){
           waitpid(-1, NULL, 0);
         }
-        printf("Pai terminou\n");
 
 
 
@@ -258,37 +251,37 @@ ANLinit(){
 
     (Global->Barload).counter = 0;
     (Global->Barload).cycle = 0;
-    sem_init(&(Global->Barload).sem_count, 0, 1);
-    sem_init(&(Global->Barload).sem_bar, 0, 0);
+    sem_init(&(Global->Barload).sem_count, 1, 1);
+    sem_init(&(Global->Barload).sem_bar, 1, 0);
 
     (Global->Bartree).counter = 0;
     (Global->Bartree).cycle = 0;
-    sem_init(&(Global->Bartree).sem_count, 0, 1);
-    sem_init(&(Global->Bartree).sem_bar, 0, 0);
+    sem_init(&(Global->Bartree).sem_count, 1, 1);
+    sem_init(&(Global->Bartree).sem_bar, 1, 0);
 
     (Global->Barcom).counter = 0;
     (Global->Barcom).cycle = 0;
-    sem_init(&(Global->Barcom).sem_count, 0, 1);
-    sem_init(&(Global->Barcom).sem_bar, 0, 0);
+    sem_init(&(Global->Barcom).sem_count, 1, 1);
+    sem_init(&(Global->Barcom).sem_bar, 1, 0);
 
     (Global->Baraccel).counter = 0;
     (Global->Baraccel).cycle = 0;
-    sem_init(&(Global->Baraccel).sem_count, 0, 1);
-    sem_init(&(Global->Baraccel).sem_bar, 0, 0);
+    sem_init(&(Global->Baraccel).sem_count, 1, 1);
+    sem_init(&(Global->Baraccel).sem_bar, 1, 0);
 
     (Global->Barstart).counter = 0;
     (Global->Barstart).cycle = 0;
-    sem_init(&(Global->Barstart).sem_count, 0, 1);
-    sem_init(&(Global->Barstart).sem_bar, 0, 0);
+    sem_init(&(Global->Barstart).sem_count, 1, 1);
+    sem_init(&(Global->Barstart).sem_bar, 1, 0);
 
     (Global->Barpos).counter = 0;
     (Global->Barpos).cycle = 0;
-    sem_init(&(Global->Barpos).sem_count, 0, 1);
-    sem_init(&(Global->Barpos).sem_bar, 0, 0);
+    sem_init(&(Global->Barpos).sem_count, 1, 1);
+    sem_init(&(Global->Barpos).sem_bar, 1, 0);
 
     /* Inicializa semaforos */
-    sem_init(&(Global->CountSem), 0, 1);
-    sem_init(&(Global->io_sem), 0, 1);
+    sem_init(&(Global->CountSem), 1, 1);
+    sem_init(&(Global->io_sem), 1, 1);
  }
 
 /*
@@ -330,6 +323,7 @@ int Log_base_2(int number) {
  * TAB_INIT : allocate body and cell data space
  */
 tab_init(){
+  //printf("Tab init start\n");
   cellptr pc;
   int i;
   char *starting_address, *ending_address;
@@ -351,6 +345,7 @@ tab_init(){
     exit(1);
   }
   shmctl(ctrl->ctabid, IPC_RMID, (struct shmid_ds *) NULL);
+  //printf("Alocado cell\n");
 
   if ((ctrl->ltabid = shmget(IPC_PRIVATE, (globalDefs->maxcell * sizeof(cell)), (SHM_R | SHM_W))) < 0){
     printf("Falha ao criar estrutura de memória compartilhada\n");
@@ -362,6 +357,7 @@ tab_init(){
     exit(1);
   }
   shmctl(ctrl->ltabid, IPC_RMID, (struct shmid_ds *) NULL);
+  //printf("Alocado leaf\n");
 
   /*for (i = 0; i < globalDefs->NPROC; ++i) {
     Local[i].ctab = (cellptr) malloc((globalDefs->maxcell / globalDefs->NPROC) * sizeof(cell));;
@@ -380,6 +376,7 @@ tab_init(){
     exit(1);
   }
   shmctl(ctrl->mbodyid, IPC_RMID, (struct shmid_ds *) NULL);
+  //printf("Alocado mybody\n");
 
   //Local[0].mybodytab = (bodyptr*) malloc(globalDefs->NPROC * globalDefs->maxmybody*sizeof(bodyptr));;
 
@@ -400,6 +397,9 @@ tab_init(){
     exit(1);
   }
   shmctl(ctrl->mcellid, IPC_RMID, (struct shmid_ds *) NULL);
+
+  //printf("Alocado my cell\n");
+
   if ((ctrl->mleafid = shmget(IPC_PRIVATE, (globalDefs->NPROC * globalDefs->maxmyleaf*sizeof(leafptr)), (SHM_R | SHM_W))) < 0){
     printf("Falha ao criar estrutura de memória compartilhada\n");
     exit(1);
@@ -410,6 +410,7 @@ tab_init(){
     exit(1);
   }
   shmctl(ctrl->mleafid, IPC_RMID, (struct shmid_ds *) NULL);
+  //printf("Alocado my leaf\n");
 
   //Local[0].mycelltab = (cellptr*) malloc(globalDefs->NPROC * globalDefs->maxmycell*sizeof(cellptr));;
   //Local[0].myleaftab = (leafptr*) malloc(globalDefs->NPROC * globalDefs->maxmyleaf*sizeof(leafptr));;
@@ -419,23 +420,26 @@ tab_init(){
     exit(1);
   }
 
-  if ((globalDefs->CellSem = shmat(mem_ctrl_id, NULL, 0)) == (void*) -1){
+  if ((globalDefs->CellSem = shmat(ctrl->cellid, NULL, 0)) == (void*) -1){
     printf("Falha ao ler estrutura de memória compartilhada na criação\n");
     exit(1);
   }
   shmctl(ctrl->cellid, IPC_RMID, (struct shmid_ds *) NULL);
+
   //globalDefs->CellSem = (struct CellSemType *) malloc(sizeof(struct CellSemType));;
+  //printf("Alocado cellsem\n");
 
   {
     unsigned long	i, Error;
     for (i = 0; i < MAXLOCK; i++) {
-      Error = sem_init(&((globalDefs->CellSem)->CL[i]), 0, 1);
+      Error = sem_init(&(globalDefs->CellSem->CL[i]), 1, 1);
       if (Error != 0) {
         printf("Error while initializing array of semaphores.\n");
         exit(-1);
       }
     }
   };
+  //printf("Tab init end\n");
 }
 
 /*
@@ -444,7 +448,7 @@ tab_init(){
 void SlaveStart(){
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
-
+   getMemAdds(1, 1, 1);
    /* initialize mybodytabs */
    Local[ProcessId].mybodytab = Local[0].mybodytab + (globalDefs->maxmybody * ProcessId);
    /* note that every process has its own copy   */
@@ -530,14 +534,14 @@ testdata(){
 
    globalDefs->headline = "Hack code: Plummer model";
    Local[0].tnow = 0.0;
-   globalDefs->bodytab = (bodyptr) malloc(globalDefs->nbody * sizeof(body));;
+   //globalDefs->bodytab = (bodyptr) malloc(globalDefs->nbody * sizeof(body));;
 
    if ((ctrl->btabid = shmget(IPC_PRIVATE, (globalDefs->nbody * sizeof(body)), (SHM_R | SHM_W))) < 0){
      printf("Falha ao criar estrutura de memória compartilhada\n");
      exit(1);
    }
 
-   if ((ctrl = shmat(ctrl->btabid, NULL, 0)) == (void*) -1){
+   if ((globalDefs->bodytab = shmat(ctrl->btabid, NULL, 0)) == (void*) -1){
      printf("Falha ao ler estrutura de memória compartilhada na criação\n");
      exit(1);
    }
@@ -678,7 +682,7 @@ void stepsystem (unsigned int ProcessId){
     if((Global->Barcom).counter == (globalDefs->NPROC - 1)){
       /* Se entrou é a ultima thread */
       (Global->Barcom).counter = 0;
-      //printf("Barcom\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
+       //printf("Barcom\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
 
       sem_post(&(Global->Barcom).sem_count);
 
@@ -697,6 +701,7 @@ void stepsystem (unsigned int ProcessId){
 
       sem_wait(&(Global->Barcom).sem_bar);
     }
+    //printf("-----Liberou %d-----\n", ProcessId);
   };
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
@@ -808,7 +813,7 @@ void stepsystem (unsigned int ProcessId){
 
     {
       unsigned long	Error, Cycle;
-      int	i, Cancel, Temp;
+      int	i, Cancel, Temp, value;
 
       //IMPLEMENTAÇÃO SEMAFOROS
 
@@ -835,6 +840,8 @@ void stepsystem (unsigned int ProcessId){
         sem_wait(&(Global->Barpos).sem_bar);
         }
     };
+    //printf("-----Liberou %d-----\n", ProcessId);
+
 
     if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
       {
@@ -915,9 +922,11 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
 
   {
     unsigned long	Error, Cycle;
-    int	i, Cancel, Temp;
+    int	i, Cancel, Temp, value;
 
     //IMPLEMENTAÇÃO SEMAFOROS
+    //sem_getvalue(&(Global->Barstart).sem_count, &value);
+    //printf("Esperando count %d, val: %d\n", ProcessId, value);
     sem_wait(&(Global->Barstart).sem_count);
 
     if((Global->Barstart).counter == (globalDefs->NPROC - 1)){
@@ -926,10 +935,13 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
       (Global->Barstart).counter = 0;
 
       sem_post(&(Global->Barstart).sem_count);
+      //printf("Liberou count %d\n", ProcessId);
 
       /* Libera todas as threads*/
       for (i = 0; i < (globalDefs->NPROC - 1); i++) {
         sem_post(&(Global->Barstart).sem_bar);
+        //sem_getvalue(&(Global->Barstart).sem_bar, &value);
+        //printf("Liberando bar %d, val: %d\n", i, value);
       }
 
     } else {
@@ -937,12 +949,15 @@ void find_my_initial_bodies(bodyptr btab, int nbody, unsigned int ProcessId){
       /* NÃO é a ultima thread, então será bloqueada na barreira */
       //printf("Barstart1\tOi eu sou a thread %d e não sou a ultimaaa :)\n", ProcessId );
       (Global->Barstart).counter++;
+      //printf("count de %d: %d\n", ProcessId, (Global->Barstart).counter);
       sem_post(&(Global->Barstart).sem_count);
+      //printf("Liberou count %d\n", ProcessId);
+      //printf("Esperando bar %d\n", ProcessId);
 
       sem_wait(&(Global->Barstart).sem_bar);
       }
   };
-
+  //printf("--------Liberou %d------\n", ProcessId);
 }
 
 void find_my_bodies(nodeptr mycell, int work, int direction, unsigned ProcessId){
@@ -1029,7 +1044,7 @@ void getMemAdds(int ct, int btab, int lcl){
 	}
 
   if(btab){
-    if ((ctrl = shmat(ctrl->btabid, NULL, 0)) == (void*) -1){
+    if ((globalDefs->bodytab = shmat(ctrl->btabid, NULL, 0)) == (void*) -1){
       printf("Falha ao ler estrutura de memória compartilhada na criação\n");
       exit(1);
     }
@@ -1067,11 +1082,12 @@ void getMemAdds(int ct, int btab, int lcl){
     }
     shmctl(ctrl->ltabid, IPC_RMID, (struct shmid_ds *) NULL);
 
-    if ((Local[0].mybodytab = shmat(ctrl->ltabid, NULL, 0)) == (void*) -1){
+    if ((Local[0].mybodytab = shmat(ctrl->mbodyid, NULL, 0)) == (void*) -1){
       printf("Falha ao ler estrutura de memória compartilhada na criação\n");
       exit(1);
     }
-    shmctl(ctrl->ltabid, IPC_RMID, (struct shmid_ds *) NULL);
+    shmctl(ctrl->mbodyid, IPC_RMID, (struct shmid_ds *) NULL);
+
     if ((Local[0].mycelltab = shmat(ctrl->mcellid, NULL, 0)) == (void*) -1){
       printf("Falha ao ler estrutura de memória compartilhada na criação\n");
       exit(1);
