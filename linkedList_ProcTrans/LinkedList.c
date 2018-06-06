@@ -449,8 +449,6 @@ int main(int argc, char *argv[]) {
       }
   }
 
-  int pids[n_threads];
-
   //FORK
   for(i = 0; i < n_threads; i++){
     pid = fork();
@@ -462,7 +460,6 @@ int main(int argc, char *argv[]) {
       break;
     }
     else{
-      pids[i] = pid;
       if(verbose) printf("Filho %d criado\n", pid);
     }
   }
@@ -487,7 +484,7 @@ int main(int argc, char *argv[]) {
     if(verbose) printf("Pai esperando\n");
 
     for(i = 0; i < n_threads; i++){
-      waitpid(pids[i], NULL, NULL);
+      waitpid(-1, NULL, NULL);
     }
 
     if(verbose) printf("Pai terminou\n");

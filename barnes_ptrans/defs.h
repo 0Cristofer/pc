@@ -19,6 +19,7 @@
 
 #include "stdinc.h"
 #include <assert.h>
+#include <semaphore.h> /* Semaforos */
 
 //#include <ulocks.h>
 
@@ -292,7 +293,7 @@ typedef struct _leaf {
 #ifdef QUADPOLE
    matrix quad;                /* quad. moment of leaf */
 #endif
-   short int done;    /* flag to tell when the c.of.m is ready */
+  short int done;    /* flag to tell when the c.of.m is ready */
    unsigned int num_bodies;
    bodyptr bodyp[MAX_BODIES_PER_LEAF];         /* bodies of leaf */
 } leaf;

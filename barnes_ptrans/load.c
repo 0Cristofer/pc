@@ -43,6 +43,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned int ProcessId);
  */
 
 maketree(unsigned ProcessId){
+	//printf("make tree %d\n", ProcessId);
 	bodyptr p, *pp;
 
 	Local[ProcessId].myncell = 0;
@@ -60,20 +61,79 @@ maketree(unsigned ProcessId){
 				ProcessId);
 			}
 			else {
-				/*__transaction_atomic{
-					fprintf(stderr, "Process %d found body %d to have zero mass\n",
-					ProcessId, (int) p);
-				}*/
+				sem_wait(&(Global->io_sem));
 				fprintf(stderr, "Process %d found body %d to have zero mass\n",
 				ProcessId, (int) p);
+				sem_post(&(Global->io_sem));
 			}
 		}
+		//printf("fim for tree %d\n", ProcessId);
 
-		pthread_barrier_wait(&(Global->Bartree));
+		{
+			unsigned long	Error, Cycle;
+			int	i, Cancel, Temp;
+
+			//IMPLEMENTAÇÃO SEMAFOROS
+
+			sem_wait(&(Global->Bartree).sem_count);
+
+	    if((Global->Bartree).counter == (globalDefs->NPROC - 1)){
+	      /* Se entrou é a ultima thread */
+	      (Global->Bartree).counter = 0;
+				//printf("Bartree\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
+
+	      sem_post(&(Global->Bartree).sem_count);
+
+	      /* Libera todas as threads*/
+	      for (i = 0; i < (globalDefs->NPROC - 1); i++) {
+	        sem_post(&(Global->Bartree).sem_bar);
+	      }
+
+	      } else {
+	      /* NÃO é a ultima thread, então será bloqueada na barreira */
+				//printf("Bartree\tOi eu sou a thread %d e não sou a ultima :)\n", ProcessId );
+	      (Global->Bartree).counter++;
+	      sem_post(&(Global->Bartree).sem_count);
+
+	      sem_wait(&(Global->Bartree).sem_bar);
+	      }
+				//printf("-----Liberou %d-----\n", ProcessId);
+
+		};
 
 		hackcofm( 0, ProcessId );
 
-		pthread_barrier_wait(&(Global->Barcom));
+		{
+			unsigned long	Error, Cycle;
+			int		i, Cancel, Temp;
+
+			//IMPLEMENTAÇÃO SEMAFOROS
+
+			sem_wait(&(Global->Barcom).sem_count);
+
+	    if((Global->Barcom).counter == (globalDefs->NPROC - 1)){
+	      /* Se entrou é a ultima thread */
+				//printf("Barcom\tOi eu sou a thread %d OMG!!! eu sou a ultima!!! :o\n\n\n", ProcessId );
+	      (Global->Barcom).counter = 0;
+
+	      sem_post(&(Global->Barcom).sem_count);
+
+	      /* Libera todas as threads*/
+	      for (i = 0; i < (globalDefs->NPROC - 1); i++) {
+	        sem_post(&(Global->Barcom).sem_bar);
+	      }
+
+	      } else {
+	      /* NÃO é a ultima thread, então será bloqueada na barreira */
+				//printf("Barcom\tOi eu sou a thread %d e não sou a ultima :)\n", ProcessId );
+	      (Global->Barcom).counter++;
+	      sem_post(&(Global->Barcom).sem_count);
+
+	      sem_wait(&(Global->Barcom).sem_bar);
+	      }
+		};
+		//printf("-----Liberou barcom %d-----\n", ProcessId);
+
 	}
 
 __attribute__((transaction_safe)) cellptr InitCell(cellptr parent, unsigned ProcessId){
@@ -165,7 +225,7 @@ void printtree (nodeptr n){
 		for (k = 0; k < l->num_bodies; k++) {
 			p = Bodyp(l)[k];
 			printf("Body #%2d: Num = %2d, Level = %o, ",
-			p - bodytab, k, Level(p));
+			p - globalDefs->bodytab, k, Level(p));
 			PRTV("Pos",Pos(p));
 			printf("\n");
 		}
@@ -183,6 +243,7 @@ void printtree (nodeptr n){
  */
 
 nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
+	//printf("Começando load %d\n", ProcessId);
 	int l, xq[NDIM], xp[NDIM], xor[NDIM], subindex(), flag;
 	int i, j, root_level;
 	bool valid_root;
@@ -230,7 +291,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 				}
 
 				if (!valid_root) {
-					printf("P%d body %d\n", ProcessId, p - bodytab);
+					printf("P%d body %d\n", ProcessId, p - globalDefs->bodytab);
 					root = Global->G_root;
 				}
 			}
@@ -252,6 +313,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 
 		if (*qptr == NULL) {
 			/* lock the parent cell */
+			/* IMPLEMENTAÇÃO SEMAFOROS */
 			__transaction_atomic{
 				if (*qptr == NULL) {
 					le = InitLeaf((cellptr) mynode, ProcessId);
@@ -264,14 +326,11 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 					flag = FALSE;
 				}
 			}
-
-			/* unlock the parent cell */
 		}
-
 		if (flag && *qptr && (Type(*qptr) == LEAF)) {
 			/*   reached a "leaf"?      */
 			__transaction_atomic{
-			/* lock the parent cell */
+				/* lock the parent cell */
 				if (Type(*qptr) == LEAF){             /* still a "leaf"?      */
 					le = (leafptr) *qptr;
 					if (le->num_bodies == MAX_BODIES_PER_LEAF) {
@@ -284,8 +343,6 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
 						flag = FALSE;
 					}
 				}
-
-			/* unlock the node           */
 			}
 		}
 
@@ -299,6 +356,7 @@ nodeptr loadtree(bodyptr p, cellptr root, unsigned ProcessId){
  }
 
  SETV(Local[ProcessId].Root_Coords, xp);
+ //printf("Fim load %d\n", ProcessId);
  return Parent((leafptr) *qptr);
 }
 
@@ -511,14 +569,14 @@ __attribute__((transaction_safe)) cellptr makecell(unsigned ProcessId){
 	cellptr c;
 	int i, Mycell;
 
-	if (Local[ProcessId].mynumcell == maxmycell) {
-		/*error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
-		ProcessId,maxmycell);*/
+	if (Local[ProcessId].mynumcell == globalDefs->maxmycell) {
+		//error3("makecell: Proc %d needs more than %d cells; increase fcells\n",
+		//ProcessId,globalDefs->maxmycell);
 	}
 
 	Mycell = Local[ProcessId].mynumcell++;
 	c = Local[ProcessId].ctab + Mycell;
-	c->seqnum = ProcessId*maxmycell+Mycell;
+	c->seqnum = ProcessId*globalDefs->maxmycell+Mycell;
 	Type(c) = CELL;
 	Done(c) = FALSE;
 	Mass(c) = 0.0;
@@ -535,18 +593,18 @@ __attribute__((transaction_safe)) cellptr makecell(unsigned ProcessId){
  * MAKELEAF: allocation routine for leaves.
  */
 
-__attribute__((transaction_safe)) leafptr makeleaf(unsigned ProcessId){
+ __attribute__((transaction_safe)) leafptr makeleaf(unsigned ProcessId){
 	leafptr le;
 	int i, Myleaf;
 
-	if (Local[ProcessId].mynumleaf == maxmyleaf) {
-		/*error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
-		ProcessId,maxmyleaf);*/
+	if (Local[ProcessId].mynumleaf == globalDefs->maxmyleaf) {
+		//error3("makeleaf: Proc %d needs more than %d leaves; increase fleaves\n",
+		//ProcessId,globalDefs->maxmyleaf);
 	}
 
 	Myleaf = Local[ProcessId].mynumleaf++;
 	le = Local[ProcessId].ltab + Myleaf;
-	le->seqnum = ProcessId * maxmyleaf + Myleaf;
+	le->seqnum = ProcessId * globalDefs->maxmyleaf + Myleaf;
 	Type(le) = LEAF;
 	Done(le) = FALSE;
 	Mass(le) = 0.0;
