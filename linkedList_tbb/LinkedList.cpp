@@ -7,6 +7,10 @@
 #include <getopt.h>
 #include <time.h>
 #include <pthread.h>
+#include "tbb/tbb.h"
+//using namespace tbb;
+
+//link
 
 #define TRUE 1
 #define FALSE 0
@@ -245,13 +249,7 @@ void printLista(){
     printf(" NULL\n\n");
 }
 
-void* experiment(void* arg){
-  /* Garante thread id unico para a threads */
-  pthread_mutex_lock(&mutex);
-  int tid = gtid++;
-  pthread_mutex_unlock(&mutex);
-
-  //printf("tid = %d\n", tid);
+void* experiment(int tid){
   int result, val, i;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
@@ -279,15 +277,15 @@ void* experiment(void* arg){
         else
           l_lookups_false++;
 
-        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
+        if(verbose) printf("%u -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        if(verbose) printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%u -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
       }
       else {
-        if(verbose) printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%u -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -311,15 +309,15 @@ void* experiment(void* arg){
         else
           l_lookups_false++;
 
-        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
+        if(verbose) printf("%u -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        if(verbose) printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%u -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
       }
       else {
-        if(verbose) printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%u -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -382,13 +380,42 @@ void printInfo(){
     printf("\nWarm Up: desativado");
 }
 
+using namespace tbb;
+  class ApplyExperiment {
+
+    int *const my_a;
+
+    public:
+
+      void operator()( const blocked_range<size_t>& r ) const {
+
+        int *a = my_a;
+
+        for( size_t i=r.begin(); i!=r.end(); ++i )
+
+          experiment(a[i]);
+
+      }
+
+      ApplyExperiment( int a[] ) :
+
+        my_a(a) {}
+
+    };
+
+    void ParallelApplyExperiment( int a[], size_t n ) {
+
+    parallel_for(blocked_range<size_t>(0,n), ApplyExperiment(a));
+}
+
 int main(int argc, char *argv[]) {
   int i;
-  printf("\nLinked List - versão mutex\n");
+  printf("\nLinked List - versão TBB\n");
 
 	getArgs(argc, argv);
 	checkData();
   printInfo();
+  tbb::task_scheduler_init init(n_threads);
 
   /* Inicializa a lista criando a sentinela */
   sentinela = (LLNode*) malloc(sizeof(LLNode));
@@ -406,26 +433,24 @@ int main(int argc, char *argv[]) {
       }
   }
 
+  int pids[n_threads];
+  for (i = 0; i < n_threads; i++) {
+    pids[i] = i;
+  }
+
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
 
   printf("\n\n\t--- Rodando experimentos ---\n");
-  for(i = 0; i < n_threads; i++){
-		pthread_create(&threads[i], NULL, experiment, NULL);
-	}
 
-  //experiment(NULL);
-
-  for(i = 0; i < n_threads; i++){
-		 pthread_join(threads[i], &pth_status);
-	}
+  ParallelApplyExperiment(pids, n_threads);
 
   clock_gettime(CLOCK_MONOTONIC, &tend);
   timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 
   printf("\t    FIM DA EXECUÇÃO.\n");
 
-  printLista();
+  if(verbose) printLista();
   printf("\nSanity Check: ");
   if(isSane())
     printf("Passed\n");

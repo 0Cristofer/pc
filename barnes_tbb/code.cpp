@@ -71,6 +71,7 @@ Command line options:
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "tbb/tbb.h"
 #define MAX_THREADS 1024
 pthread_t PThreadTable[MAX_THREADS];
 
@@ -97,9 +98,9 @@ string defv[] = {                 /* DEFAULT PARAMETER VALUES              */
     "eps=0.05",                   /* usual potential softening             */
     "tol=1.0",                    /* cell subdivision tolerence            */
     "fcells=2.0",                 /* cell allocation parameter             */
-    "fleaves=0.5",                 /* leaf allocation parameter             */
+    "fleaves=0.5",                 /* leaf allocation parameter            */
 
-    "tstop=0.075",                 /* time to stop integration              */
+    "tstop=0.075",                 /* time to stop integration             */
     "dtout=0.25",                 /* data-output interval                  */
 
     "NPROC=1",                    /* number of processors                  */
@@ -110,97 +111,6 @@ void stepsystem (unsigned int ProcessId);
 void ComputeForces ();
 void Help();
 FILE *fopen();
-
-main(int argc, string argv[]) {
-  unsigned ProcessId = 0;
-  int c;
-
-  while ((c = getopt(argc, argv, "h")) != -1) {
-    switch(c) {
-      case 'h':
-	       Help();
-	       exit(-1);
-	       break;
-
-      default:
-	      fprintf(stderr, "Only valid option is \"-h\".\n");
-	      exit(-1);
-	      break;
-    }
-   }
-
-   ANLinit();
-   initparam(argv, defv);
-   startrun();
-   initoutput();
-   tab_init();
-
-   Global->tracktime = 0;
-   Global->partitiontime = 0;
-   Global->treebuildtime = 0;
-   Global->forcecalctime = 0;
-
-   /* Create the slave processes: number of processors less one,
-      since the master will do work as well */
-   Global->current_id = 0;
-   //for(ProcessId = 1; ProcessId < NPROC; ProcessId++) {
-
-   /* Make the master do slave work so we don't waste the processor */
-   {
-     struct timeval	FullTime;
-     gettimeofday(&FullTime, NULL);
-     (Global->computestart) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
-   };
-
-   printf("COMPUTESTART  = %12lu\n",Global->computestart);
-
-   {
-     long	i, Error;
-     for (i = 0; i < (NPROC) - 1; i++) {
-       Error = pthread_create(&PThreadTable[i], NULL, (void * (*)(void *))(SlaveStart), NULL);
-       if (Error != 0) {
-         printf("Error in pthread_create().\n");
-         exit(-1);
-       }
-     }
-
-     SlaveStart();
-   };
-
-   {
-     unsigned long	i, Error;
-     for (i = 0; i < (NPROC) - 1; i++) {
-       Error = pthread_join(PThreadTable[i], NULL);
-       if (Error != 0) {
-         printf("Error in pthread_join().\n");
-         exit(-1);
-       }
-     }
-   };
-
-   {
-     struct timeval	FullTime;
-     gettimeofday(&FullTime, NULL);
-     (Global->computeend) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
-   };
-
-   printf("COMPUTEEND    = %12lu\n",Global->computeend);
-   printf("COMPUTETIME   = %12lu\n",Global->computeend - Global->computestart);
-   printf("TRACKTIME     = %12lu\n",Global->tracktime);
-   printf("PARTITIONTIME = %12lu\t%5.2f\n",Global->partitiontime,
-   ((float)Global->partitiontime)/Global->tracktime);
-   printf("TREEBUILDTIME = %12lu\t%5.2f\n",Global->treebuildtime,
-   ((float)Global->treebuildtime)/Global->tracktime);
-   printf("FORCECALCTIME = %12lu\t%5.2f\n",Global->forcecalctime,
-   ((float)Global->forcecalctime)/Global->tracktime);
-   printf("RESTTIME      = %12lu\t%5.2f\n",
-   Global->tracktime - Global->partitiontime -
-   Global->treebuildtime - Global->forcecalctime,
-      ((float)(Global->tracktime-Global->partitiontime-
-      Global->treebuildtime-Global->forcecalctime))/
-      Global->tracktime);
-     {exit(0);};
- }
 
 /*
  * ANLINIT : initialize ANL macros
@@ -415,13 +325,8 @@ tab_init(){
 /*
  * SLAVESTART: main task for each processor
  */
-void SlaveStart(){
-   unsigned int ProcessId;
-
-   /* Get unique ProcessId */
-   {pthread_mutex_lock(&(Global->CountLock));};
-   ProcessId = Global->current_id++;
-   {pthread_mutex_unlock(&(Global->CountLock));};
+void SlaveStart(int tid){
+   unsigned int ProcessId = tid;
 
 /* POSSIBLE ENHANCEMENT:  Here is where one might pin processes to
    processors to avoid migration */
@@ -975,6 +880,108 @@ setbound(){
   SETVS(Global->max,-1E99);
   SETVS(Global->min,1E99);
 }
+
+
+using namespace tbb;
+class ApplySlaveStart {
+
+    int *const my_a;
+
+    public:
+
+      void operator()( const blocked_range<size_t>& r ) const {
+
+        int *a = my_a;
+
+        for( size_t i=r.begin(); i!=r.end(); ++i )
+
+          SlaveStart(a[i]);
+
+      }
+
+      ApplySlaveStart( int a[] ) :
+
+        my_a(a) {}
+
+    };
+
+void ParallelApplySlaveStart( int a[], size_t n ) {
+
+    parallel_for(blocked_range<size_t>(0,n), ApplySlaveStart(a));
+}
+
+main(int argc, string argv[]) {
+  unsigned ProcessId = 0;
+  int c;
+
+  while ((c = getopt(argc, argv, "h")) != -1) {
+    switch(c) {
+      case 'h':
+	       Help();
+	       exit(-1);
+	       break;
+
+      default:
+	      fprintf(stderr, "Only valid option is \"-h\".\n");
+	      exit(-1);
+	      break;
+    }
+   }
+
+   ANLinit();
+   initparam(argv, defv);
+   startrun();
+   initoutput();
+   tab_init();
+
+   Global->tracktime = 0;
+   Global->partitiontime = 0;
+   Global->treebuildtime = 0;
+   Global->forcecalctime = 0;
+
+   /* Create the slave processes: number of processors less one,
+      since the master will do work as well */
+   Global->current_id = 0;
+
+   int pids[n_threads];
+   for (i = 0; i < n_threads; i++) {
+     pids[i] = i;
+   }
+
+   /* Make the master do slave work so we don't waste the processor */
+   printf("COMPUTESTART  = %12lu\n",Global->computestart);
+   {
+     struct timeval	FullTime;
+     gettimeofday(&FullTime, NULL);
+     (Global->computestart) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
+   };
+
+   ParallelApplySlaveStart(pids, NPROC);
+
+   {
+     struct timeval	FullTime;
+     gettimeofday(&FullTime, NULL);
+     (Global->computeend) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
+   };
+
+
+   printf("COMPUTEEND    = %12lu\n",Global->computeend);
+   printf("COMPUTETIME   = %12lu\n",Global->computeend - Global->computestart);
+   printf("TRACKTIME     = %12lu\n",Global->tracktime);
+   printf("PARTITIONTIME = %12lu\t%5.2f\n",Global->partitiontime,
+   ((float)Global->partitiontime)/Global->tracktime);
+   printf("TREEBUILDTIME = %12lu\t%5.2f\n",Global->treebuildtime,
+   ((float)Global->treebuildtime)/Global->tracktime);
+   printf("FORCECALCTIME = %12lu\t%5.2f\n",Global->forcecalctime,
+   ((float)Global->forcecalctime)/Global->tracktime);
+   printf("RESTTIME      = %12lu\t%5.2f\n",
+   Global->tracktime - Global->partitiontime -
+   Global->treebuildtime - Global->forcecalctime,
+      ((float)(Global->tracktime-Global->partitiontime-
+      Global->treebuildtime-Global->forcecalctime))/
+      Global->tracktime);
+     {exit(0);};
+ }
 
 void Help (){
    printf("There are a total of twelve parameters, and all of them have default values.\n");
