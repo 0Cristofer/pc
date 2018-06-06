@@ -7,11 +7,46 @@
 #include <getopt.h>
 #include <time.h>
 #include <pthread.h>
+#include "tbb/tbb.h"
+//using namespace tbb;
+
+//link https://software.intel.com/en-us/blogs/2009/08/03/parallel_for-is-easier-with-lambdas-intel-threading-building-blocks
 
 #define TRUE 1
 #define FALSE 0
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+using namespace tbb;
+ 
+class ApplyFoo {
+ 
+  float *const my_a;
+ 
+  public:
+ 
+    void operator()( const blocked_range<size_t>& r ) const {
+ 
+      float *a = my_a;
+ 
+      for( size_t i=r.begin(); i!=r.end(); ++i )
+ 
+        Foo(a[i]);
+ 
+    }
+ 
+    ApplyFoo( float a[] ) :
+ 
+      my_a(a) {}
+ 
+  };
+ 
+  void ParallelApplyFoo( float a[], size_t n ) {
+ 
+  parallel_for(blocked_range<size_t>(0,n), ApplyFoo(a));
+ 
+}
+
 
 /* Estruturas */
 typedef struct pthread_arg{
@@ -245,13 +280,9 @@ void printLista(){
     printf(" NULL\n\n");
 }
 
-void* experiment(void* arg){
-  /* Garante thread id unico para a threads */
-  pthread_mutex_lock(&mutex);
-  int tid = gtid++;
-  pthread_mutex_unlock(&mutex);
+void* experiment(int tid){
+  printf("tid = %u\n", tid);
 
-  //printf("tid = %d\n", tid);
   int result, val, i;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
@@ -279,15 +310,15 @@ void* experiment(void* arg){
         else
           l_lookups_false++;
 
-        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
+        if(verbose) printf("%u -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        if(verbose) printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%u -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
       }
       else {
-        if(verbose) printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%u -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -311,15 +342,15 @@ void* experiment(void* arg){
         else
           l_lookups_false++;
 
-        if(verbose) printf("%d -> lookup %d : %d\n", tid, val, result);
+        if(verbose) printf("%u -> lookup %d : %d\n", tid, val, result);
       }
       else if (action < insertPct) {
-        if(verbose) printf("%d -> insert %d\n", tid, val);
+        if(verbose) printf("%u -> insert %d\n", tid, val);
         insert(val);
         l_inserts++;
       }
       else {
-        if(verbose) printf("%d -> remove %d\n", tid, val);
+        if(verbose) printf("%u -> remove %d\n", tid, val);
         removeNode(val);
         l_removes++;
       }
@@ -384,11 +415,12 @@ void printInfo(){
 
 int main(int argc, char *argv[]) {
   int i;
-  printf("\nLinked List - versão mutex\n");
+  printf("\nLinked List - versão TBB\n");
 
 	getArgs(argc, argv);
 	checkData();
   printInfo();
+  tbb::task_scheduler_init init(n_threads);
 
   /* Inicializa a lista criando a sentinela */
   sentinela = (LLNode*) malloc(sizeof(LLNode));
@@ -409,17 +441,13 @@ int main(int argc, char *argv[]) {
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
 
+  int pids[] = {0,1,2,3};
   printf("\n\n\t--- Rodando experimentos ---\n");
-  for(i = 0; i < n_threads; i++){
-		pthread_create(&threads[i], NULL, experiment, NULL);
-	}
 
-  //experiment(NULL);
+  tbb::parallel_for(size_t(0), n_threads, size_t(1) , [=](size_t i) {experiment(pids[i]);});  
 
-  for(i = 0; i < n_threads; i++){
-		 pthread_join(threads[i], &pth_status);
-	}
-
+  //grupo.wait();
+  
   clock_gettime(CLOCK_MONOTONIC, &tend);
   timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 
