@@ -215,7 +215,6 @@ ANLinit(){
 
    {
      unsigned long	Error;
-     printf("proc: %ld\n", NPROC);
 
      Error = pthread_barrier_init(&(Global->Barload), NULL, NPROC);
      if (Error != 0) {

@@ -1,5 +1,5 @@
 all:
-	gcc *.c -pthread -lm -fgnu-tm -w -o barnes
+	gcc *.c -pthread -lm -fgnu-tm -w -o barnes_transactions
 
 clean:
-	rm barnes
+	rm barnes_transactions

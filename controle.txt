@@ -16,11 +16,11 @@ Processos + transação ->
 
 
 --- LINKED LIST ---
-Sequencial -> Passando
-Mutex -> Passando
-Spin -> Passando
-Semaforo -> Passando
-transação -> Passando
+Sequencial -> Passando e polido
+Mutex -> Passando e polido
+Spin -> Passando e polido
+Semaforo -> Passando e polido
+transação -> Passando e polido
 TBB ->
-Processos + semaforo ->
+Processos + semaforo -> Passando e polido
 Processos + transação ->
