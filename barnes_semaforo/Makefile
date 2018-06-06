@@ -1,5 +1,5 @@
 all:
-	gcc *.c -lm -pthread -w -o barnes_semaforo
+	gcc *.c -O3 -lm -pthread -w -o barnes_semaforo
 
 clean:
 	rm barnes_semaforo

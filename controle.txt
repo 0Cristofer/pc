@@ -21,6 +21,18 @@ Mutex -> Passando e polido
 Spin -> Passando e polido
 Semaforo -> Passando e polido
 transação -> Passando e polido
-TBB ->
+TBB -> GG
 Processos + semaforo -> Passando e polido
 Processos + transação ->
+
+
+--- COMANDOS ---
+perf stat -d [COMANDO]
+  > context switch
+  > cycles
+  > instructions
+  > branches
+  > branches miss
+  > l1d cache load
+  > l1d cache miss
+  > page faults

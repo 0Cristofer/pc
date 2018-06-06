@@ -10,43 +10,12 @@
 #include "tbb/tbb.h"
 //using namespace tbb;
 
-//link https://software.intel.com/en-us/blogs/2009/08/03/parallel_for-is-easier-with-lambdas-intel-threading-building-blocks
+//link
 
 #define TRUE 1
 #define FALSE 0
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-using namespace tbb;
- 
-class ApplyFoo {
- 
-  float *const my_a;
- 
-  public:
- 
-    void operator()( const blocked_range<size_t>& r ) const {
- 
-      float *a = my_a;
- 
-      for( size_t i=r.begin(); i!=r.end(); ++i )
- 
-        Foo(a[i]);
- 
-    }
- 
-    ApplyFoo( float a[] ) :
- 
-      my_a(a) {}
- 
-  };
- 
-  void ParallelApplyFoo( float a[], size_t n ) {
- 
-  parallel_for(blocked_range<size_t>(0,n), ApplyFoo(a));
- 
-}
-
 
 /* Estruturas */
 typedef struct pthread_arg{
@@ -281,8 +250,6 @@ void printLista(){
 }
 
 void* experiment(int tid){
-  printf("tid = %u\n", tid);
-
   int result, val, i;
   float action;
   int l_ops, l_lookups_true, l_lookups_false, l_inserts, l_removes;
@@ -413,6 +380,34 @@ void printInfo(){
     printf("\nWarm Up: desativado");
 }
 
+using namespace tbb;
+  class ApplyExperiment {
+
+    int *const my_a;
+
+    public:
+
+      void operator()( const blocked_range<size_t>& r ) const {
+
+        int *a = my_a;
+
+        for( size_t i=r.begin(); i!=r.end(); ++i )
+
+          experiment(a[i]);
+
+      }
+
+      ApplyExperiment( int a[] ) :
+
+        my_a(a) {}
+
+    };
+
+    void ParallelApplyExperiment( int a[], size_t n ) {
+
+    parallel_for(blocked_range<size_t>(0,n), ApplyExperiment(a));
+}
+
 int main(int argc, char *argv[]) {
   int i;
   printf("\nLinked List - versão TBB\n");
@@ -438,22 +433,24 @@ int main(int argc, char *argv[]) {
       }
   }
 
+  int pids[n_threads];
+  for (i = 0; i < n_threads; i++) {
+    pids[i] = i;
+  }
+
   clock_gettime(CLOCK_MONOTONIC, &tstart);
   timeDiff = 0;
 
-  int pids[] = {0,1,2,3};
   printf("\n\n\t--- Rodando experimentos ---\n");
 
-  tbb::parallel_for(size_t(0), n_threads, size_t(1) , [=](size_t i) {experiment(pids[i]);});  
+  ParallelApplyExperiment(pids, n_threads);
 
-  //grupo.wait();
-  
   clock_gettime(CLOCK_MONOTONIC, &tend);
   timeDiff = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 
   printf("\t    FIM DA EXECUÇÃO.\n");
 
-  printLista();
+  if(verbose) printLista();
   printf("\nSanity Check: ");
   if(isSane())
     printf("Passed\n");
