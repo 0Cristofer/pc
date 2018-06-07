@@ -1,20 +1,20 @@
-# started on Thu Jun  7 02:02:19 2018
+# started on Thu Jun  7 02:09:50 2018
 
 
  Performance counter stats for './linkedList_seq':
 
-       5000,199887      task-clock (msec)         #    1,000 CPUs utilized          
-                 5      context-switches          #    0,001 K/sec                  
+       5000,282876      task-clock (msec)         #    1,000 CPUs utilized          
+                 3      context-switches          #    0,001 K/sec                  
                  0      cpu-migrations            #    0,000 K/sec                  
-                59      page-faults               #    0,012 K/sec                  
-    15.759.336.819      cycles                    #    3,152 GHz                    
-    25.754.233.121      instructions              #    1,63  insn per cycle         
-     7.534.204.276      branches                  # 1506,781 M/sec                  
-        51.715.353      branch-misses             #    0,69% of all branches        
-     7.684.083.908      L1-dcache-loads           # 1536,755 M/sec                  
-            37.563      L1-dcache-load-misses     #    0,00% of all L1-dcache hits  
-             8.263      LLC-loads                 #    0,002 M/sec                  
-             4.400      LLC-load-misses           #   53,25% of all LL-cache hits   
+                56      page-faults               #    0,011 K/sec                  
+    15.825.042.535      cycles                    #    3,165 GHz                    
+    25.802.984.213      instructions              #    1,63  insn per cycle         
+     7.548.384.964      branches                  # 1509,592 M/sec                  
+        52.023.070      branch-misses             #    0,69% of all branches        
+     7.698.609.774      L1-dcache-loads           # 1539,635 M/sec                  
+            36.968      L1-dcache-load-misses     #    0,00% of all L1-dcache hits  
+             5.540      LLC-loads                 #    0,001 M/sec                  
+             1.950      LLC-load-misses           #   35,20% of all LL-cache hits   
 
-       5,000590458 seconds time elapsed
+       5,000612347 seconds time elapsed
 

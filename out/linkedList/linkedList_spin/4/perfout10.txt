@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:38 2018
+# started on Thu Jun  7 02:15:49 2018
+
+
+ Performance counter stats for './linkedList_spin -n 4':
+
+      19903,627599      task-clock (msec)         #    3,980 CPUs utilized          
+            10.340      context-switches          #    0,520 K/sec                  
+                 4      cpu-migrations            #    0,000 K/sec                  
+                84      page-faults               #    0,004 K/sec                  
+    55.541.523.027      cycles                    #    2,791 GHz                    
+     5.895.108.428      instructions              #    0,11  insn per cycle         
+     2.014.022.102      branches                  #  101,189 M/sec                  
+        47.178.297      branch-misses             #    2,34% of all branches        
+     1.756.967.074      L1-dcache-loads           #   88,274 M/sec                  
+       371.795.179      L1-dcache-load-misses     #   21,16% of all L1-dcache hits  
+       187.276.874      LLC-loads                 #    9,409 M/sec                  
+             2.117      LLC-load-misses           #    0,00% of all LL-cache hits   
+
+       5,000894806 seconds time elapsed
 

@@ -1,0 +1,19 @@
+
+Linked List - versão sem
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da fila = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+	    FIM DA EXECUÇÃO.
+
+Sanity Check: Passed
+Tempo de execução dos experimentos = 5.000147 segundos
+Total de operações realizadas = 5878125
+Total de lookups acertados: 1000133
+Total de lookups falhados: 999626
+Total de Inserts: 1939732
+Total de removes: 1938634

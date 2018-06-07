@@ -11,8 +11,8 @@ Warm Up: desativado
 
 Sanity Check: Passed
 Tempo de execução dos experimentos = 5.000000 segundos
-Total de operações realizadas = 16037663
-Total de lookups acertados: 2723549
-Total de lookups falhados: 2726587
-Total de Inserts: 5290415
-Total de removes: 5297112
+Total de operações realizadas = 16133876
+Total de lookups acertados: 2740482
+Total de lookups falhados: 2740333
+Total de Inserts: 5324807
+Total de removes: 5328254

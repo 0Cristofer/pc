@@ -1,0 +1,19 @@
+
+Linked List - versão mutex
+
+Número de threads = 16
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da fila = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+	    FIM DA EXECUÇÃO.
+
+Sanity Check: Passed
+Tempo de execução dos experimentos = 5.000345 segundos
+Total de operações realizadas = 4734317
+Total de lookups acertados: 804445
+Total de lookups falhados: 805094
+Total de Inserts: 1562800
+Total de removes: 1561978

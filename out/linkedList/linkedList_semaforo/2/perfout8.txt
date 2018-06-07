@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:40 2018
+# started on Thu Jun  7 02:18:26 2018
+
+
+ Performance counter stats for './linkedList_semaforo -n 2':
+
+       6952,462280      task-clock (msec)         #    1,390 CPUs utilized          
+           366.633      context-switches          #    0,053 M/sec                  
+                 1      cpu-migrations            #    0,000 K/sec                  
+                74      page-faults               #    0,011 K/sec                  
+    18.612.654.090      cycles                    #    2,677 GHz                    
+    11.231.475.576      instructions              #    0,60  insn per cycle         
+     2.554.224.030      branches                  #  367,384 M/sec                  
+        62.869.779      branch-misses             #    2,46% of all branches        
+     3.228.121.045      L1-dcache-loads           #  464,313 M/sec                  
+       165.865.316      L1-dcache-load-misses     #    5,14% of all L1-dcache hits  
+        41.926.894      LLC-loads                 #    6,031 M/sec                  
+             2.670      LLC-load-misses           #    0,01% of all LL-cache hits   
+
+       5,000774453 seconds time elapsed
 

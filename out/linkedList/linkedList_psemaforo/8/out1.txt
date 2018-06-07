@@ -1,0 +1,99 @@
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+	    FIM DA EXECUÇÃO.
+
+Sanity Check: Passou
+Tempo de execução dos experimentos = 5.000594 segundos
+Total de operações realizadas = 6382524
+Total de lookups acertados: 1084060
+Total de lookups falhados: 1083982
+Total de Inserts: 2108945
+Total de removes: 2105537

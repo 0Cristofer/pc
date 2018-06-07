@@ -1,0 +1,19 @@
+
+Linked List - versão spin
+
+Número de threads = 8
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+	    FIM DA EXECUÇÃO.
+
+Sanity Check: Passed
+Tempo de execução dos experimentos = 5.006296 segundos
+Total de operações realizadas = 2610647
+Total de lookups acertados: 443509
+Total de lookups falhados: 444666
+Total de Inserts: 861474
+Total de removes: 860998

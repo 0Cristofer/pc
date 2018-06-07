@@ -1,20 +1,20 @@
-# started on Thu Jun  7 02:02:49 2018
+# started on Thu Jun  7 02:10:30 2018
 
 
  Performance counter stats for './linkedList_mutex -n 2':
 
-        204,714812      task-clock (msec)         #    1,344 CPUs utilized          
-            12.929      context-switches          #    0,063 M/sec                  
-                 0      cpu-migrations            #    0,000 K/sec                  
-                71      page-faults               #    0,347 K/sec                  
-       531.974.841      cycles                    #    2,599 GHz                    
-       482.799.493      instructions              #    0,91  insn per cycle         
-       139.259.407      branches                  #  680,261 M/sec                  
-         1.997.390      branch-misses             #    1,43% of all branches        
-       145.154.449      L1-dcache-loads           #  709,057 M/sec                  
-         4.465.911      L1-dcache-load-misses     #    3,08% of all L1-dcache hits  
-         1.014.098      LLC-loads                 #    4,954 M/sec                  
-             2.825      LLC-load-misses           #    0,28% of all LL-cache hits   
+       6753,957780      task-clock (msec)         #    1,351 CPUs utilized          
+           396.871      context-switches          #    0,059 M/sec                  
+                 3      cpu-migrations            #    0,000 K/sec                  
+                73      page-faults               #    0,011 K/sec                  
+    17.823.918.335      cycles                    #    2,639 GHz                    
+    15.933.635.677      instructions              #    0,89  insn per cycle         
+     4.506.035.895      branches                  #  667,170 M/sec                  
+        63.149.724      branch-misses             #    1,40% of all branches        
+     4.771.259.080      L1-dcache-loads           #  706,439 M/sec                  
+       180.757.527      L1-dcache-load-misses     #    3,79% of all L1-dcache hits  
+        43.433.852      LLC-loads                 #    6,431 M/sec                  
+             2.875      LLC-load-misses           #    0,01% of all LL-cache hits   
 
-       0,152371920 seconds time elapsed
+       5,000732722 seconds time elapsed
 

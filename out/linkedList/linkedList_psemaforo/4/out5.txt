@@ -1,0 +1,59 @@
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 4
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 4
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 4
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 4
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+
+Linked List - versão Processos + semaforos
+
+Número de threads = 4
+Modo tempo de execução = 5.00 segundos
+Tamanho máximo da lista = 256 nodes
+Porcentagens das operações: 0.34 Lookup / 0.33 Insert / 0.33 Remove
+Warm Up: desativado
+
+	--- Rodando experimentos ---
+	    FIM DA EXECUÇÃO.
+
+Sanity Check: Passou
+Tempo de execução dos experimentos = 5.000385 segundos
+Total de operações realizadas = 6864565
+Total de lookups acertados: 1167047
+Total de lookups falhados: 1166567
+Total de Inserts: 2265723
+Total de removes: 2265228

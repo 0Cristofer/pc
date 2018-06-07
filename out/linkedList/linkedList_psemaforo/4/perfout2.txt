@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:46 2018
+# started on Thu Jun  7 02:26:17 2018
+
+
+ Performance counter stats for './linkedList_psemaforo -n 4':
+
+      13781,231568      task-clock (msec)         #    2,756 CPUs utilized          
+           709.486      context-switches          #    0,051 M/sec                  
+                30      cpu-migrations            #    0,002 K/sec                  
+               221      page-faults               #    0,016 K/sec                  
+    34.507.520.897      cycles                    #    2,504 GHz                    
+    22.593.212.610      instructions              #    0,65  insn per cycle         
+     5.089.754.674      branches                  #  369,325 M/sec                  
+        85.812.279      branch-misses             #    1,69% of all branches        
+     6.235.992.515      L1-dcache-loads           #  452,499 M/sec                  
+       336.920.324      L1-dcache-load-misses     #    5,40% of all L1-dcache hits  
+       105.766.742      LLC-loads                 #    7,675 M/sec                  
+             3.070      LLC-load-misses           #    0,00% of all LL-cache hits   
+
+       5,001061835 seconds time elapsed
 

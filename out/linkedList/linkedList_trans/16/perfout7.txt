@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:45 2018
+# started on Thu Jun  7 02:24:51 2018
+
+
+ Performance counter stats for './linkedList_trans -n 16':
+
+      18429,774049      task-clock (msec)         #    3,685 CPUs utilized          
+         2.520.281      context-switches          #    0,137 M/sec                  
+           229.151      cpu-migrations            #    0,012 M/sec                  
+               159      page-faults               #    0,009 K/sec                  
+    50.050.516.902      cycles                    #    2,716 GHz                    
+    30.185.344.234      instructions              #    0,60  insn per cycle         
+     6.544.943.236      branches                  #  355,129 M/sec                  
+       102.680.471      branch-misses             #    1,57% of all branches        
+     9.646.947.320      L1-dcache-loads           #  523,444 M/sec                  
+     1.134.389.025      L1-dcache-load-misses     #   11,76% of all L1-dcache hits  
+       286.849.472      LLC-loads                 #   15,564 M/sec                  
+            12.906      LLC-load-misses           #    0,00% of all LL-cache hits   
+
+       5,001063286 seconds time elapsed
 

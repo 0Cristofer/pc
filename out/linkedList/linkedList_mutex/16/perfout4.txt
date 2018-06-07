@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:36 2018
+# started on Thu Jun  7 02:13:27 2018
+
+
+ Performance counter stats for './linkedList_mutex -n 16':
+
+      19547,201151      task-clock (msec)         #    3,909 CPUs utilized          
+         3.135.453      context-switches          #    0,160 M/sec                  
+           122.785      cpu-migrations            #    0,006 M/sec                  
+               125      page-faults               #    0,006 K/sec                  
+    54.306.767.331      cycles                    #    2,778 GHz                    
+    30.740.829.331      instructions              #    0,57  insn per cycle         
+     5.928.086.663      branches                  #  303,270 M/sec                  
+       106.847.144      branch-misses             #    1,80% of all branches        
+     8.868.444.169      L1-dcache-loads           #  453,694 M/sec                  
+     1.206.592.119      L1-dcache-load-misses     #   13,61% of all L1-dcache hits  
+       351.549.706      LLC-loads                 #   17,985 M/sec                  
+             2.590      LLC-load-misses           #    0,00% of all LL-cache hits   
+
+       5,000911133 seconds time elapsed
 
