@@ -1,0 +1,20 @@
+# started on Thu Jun  7 02:02:48 2018
+
+
+ Performance counter stats for './linkedList_seq':
+
+        853,897935      task-clock (msec)         #    0,999 CPUs utilized          
+                12      context-switches          #    0,014 K/sec                  
+                 0      cpu-migrations            #    0,000 K/sec                  
+                56      page-faults               #    0,066 K/sec                  
+     2.703.156.018      cycles                    #    3,166 GHz                    
+     4.392.634.614      instructions              #    1,63  insn per cycle         
+     1.284.882.945      branches                  # 1504,727 M/sec                  
+         8.834.083      branch-misses             #    0,69% of all branches        
+     1.310.578.804      L1-dcache-loads           # 1534,819 M/sec                  
+            31.445      L1-dcache-load-misses     #    0,00% of all L1-dcache hits  
+             7.789      LLC-loads                 #    0,009 M/sec                  
+             3.676      LLC-load-misses           #   47,19% of all LL-cache hits   
+
+       0,854490627 seconds time elapsed
+

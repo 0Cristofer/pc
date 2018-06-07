@@ -1,3 +1,0 @@
-/home/cristofer/Downloads/pc/pc/linkedList_mutex/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/cristofer/Downloads/pc/pc/linkedList_mutex/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/cristofer/Downloads/pc/pc/linkedList_mutex/cmake-build-debug/CMakeFiles/linkedList_mutex.dir

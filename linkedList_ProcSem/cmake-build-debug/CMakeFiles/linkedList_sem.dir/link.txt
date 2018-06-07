@@ -1,1 +1,0 @@
-/usr/bin/cc -g   CMakeFiles/linkedList_sem.dir/LinkedList.c.o  -o linkedList_sem -lpthread 
