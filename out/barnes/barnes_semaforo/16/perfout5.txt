@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:58 2018
+# started on Thu Jun  7 04:46:54 2018
+
+
+ Performance counter stats for './barnes_semaforo':
+
+     130407,649880      task-clock (msec)         #    3,884 CPUs utilized          
+            19.730      context-switches          #    0,151 K/sec                  
+               359      cpu-migrations            #    0,003 K/sec                  
+           250.083      page-faults               #    0,002 M/sec                  
+   356.114.148.251      cycles                    #    2,731 GHz                    
+   669.633.848.135      instructions              #    1,88  insn per cycle         
+    76.623.752.867      branches                  #  587,571 M/sec                  
+       945.589.312      branch-misses             #    1,23% of all branches        
+   230.648.645.329      L1-dcache-loads           # 1768,674 M/sec                  
+    14.377.889.706      L1-dcache-load-misses     #    6,23% of all L1-dcache hits  
+       717.177.121      LLC-loads                 #    5,500 M/sec                  
+       245.905.558      LLC-load-misses           #   34,29% of all LL-cache hits   
+
+      33,571957586 seconds time elapsed
 

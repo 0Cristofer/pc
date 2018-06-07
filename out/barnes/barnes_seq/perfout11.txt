@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:49 2018
+# started on Thu Jun  7 03:16:41 2018
+
+
+ Performance counter stats for './barnes_seq':
+
+     287013,625345      task-clock (msec)         #    1,000 CPUs utilized          
+                91      context-switches          #    0,000 K/sec                  
+                 0      cpu-migrations            #    0,000 K/sec                  
+           373.843      page-faults               #    0,001 M/sec                  
+   905.484.079.310      cycles                    #    3,155 GHz                    
+ 1.914.624.051.415      instructions              #    2,11  insn per cycle         
+   112.238.539.863      branches                  #  391,056 M/sec                  
+     1.759.418.825      branch-misses             #    1,57% of all branches        
+   627.107.929.691      L1-dcache-loads           # 2184,941 M/sec                  
+    13.848.142.432      L1-dcache-load-misses     #    2,21% of all L1-dcache hits  
+       627.833.836      LLC-loads                 #    2,187 M/sec                  
+       181.992.155      LLC-load-misses           #   28,99% of all LL-cache hits   
+
+     287,009522053 seconds time elapsed
 

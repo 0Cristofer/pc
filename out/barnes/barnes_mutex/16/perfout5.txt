@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:52 2018
+# started on Thu Jun  7 03:47:30 2018
+
+
+ Performance counter stats for './barnes_mutex':
+
+     132622,864921      task-clock (msec)         #    3,870 CPUs utilized          
+            22.733      context-switches          #    0,171 K/sec                  
+             1.237      cpu-migrations            #    0,009 K/sec                  
+           250.065      page-faults               #    0,002 M/sec                  
+   364.068.609.600      cycles                    #    2,745 GHz                    
+   671.721.559.173      instructions              #    1,85  insn per cycle         
+    77.210.476.476      branches                  #  582,181 M/sec                  
+     1.186.325.873      branch-misses             #    1,54% of all branches        
+   231.269.375.942      L1-dcache-loads           # 1743,812 M/sec                  
+    14.359.042.995      L1-dcache-load-misses     #    6,21% of all L1-dcache hits  
+       673.127.490      LLC-loads                 #    5,076 M/sec                  
+       249.925.806      LLC-load-misses           #   37,13% of all LL-cache hits   
+
+      34,268814591 seconds time elapsed
 

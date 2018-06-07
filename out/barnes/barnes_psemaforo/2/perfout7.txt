@@ -1,2 +1,20 @@
-# started on Thu Jun  7 02:00:01 2018
+# started on Thu Jun  7 04:56:19 2018
+
+
+ Performance counter stats for './barnes_psemaforo':
+
+     108696,997101      task-clock (msec)         #    1,950 CPUs utilized          
+               638      context-switches          #    0,006 K/sec                  
+                 0      cpu-migrations            #    0,000 K/sec                  
+           598.461      page-faults               #    0,006 M/sec                  
+   316.374.875.301      cycles                    #    2,911 GHz                    
+   553.142.400.146      instructions              #    1,75  insn per cycle         
+    71.069.334.738      branches                  #  653,830 M/sec                  
+     1.007.988.785      branch-misses             #    1,42% of all branches        
+   200.742.028.179      L1-dcache-loads           # 1846,804 M/sec                  
+    13.909.477.370      L1-dcache-load-misses     #    6,93% of all L1-dcache hits  
+       651.681.899      LLC-loads                 #    5,995 M/sec                  
+       208.975.120      LLC-load-misses           #   32,07% of all LL-cache hits   
+
+      55,737866900 seconds time elapsed
 

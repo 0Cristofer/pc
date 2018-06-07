@@ -54,23 +54,6 @@ linkedList_semaforo
 462876.875
 0.5
 
-linkedList_trans
-2
-1411289.25
-0.8
-
-4
-706977.875
-0.6
-
-8
-709821.75
-0.5
-
-16
-507273.0
-0.6
-
 linkedList_psemaforo
 2
 618971.75

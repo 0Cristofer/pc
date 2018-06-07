@@ -1,0 +1,14 @@
+
+		Hack code: Plummer model
+
+     nbody     dtime       eps       tol     dtout     tstop    fcells     NPROC
+   4194304   0.02500    0.0500      1.00     0.250     0.075      2.00         1
+
+COMPUTESTART  = 1528351918393123
+COMPUTEEND    = 1528352201604406
+COMPUTETIME   =    283211283
+TRACKTIME     =    140919218
+PARTITIONTIME =       578645	 0.00
+TREEBUILDTIME =      4050460	 0.03
+FORCECALCTIME =    135119279	 0.96
+RESTTIME      =      1170834	 0.01

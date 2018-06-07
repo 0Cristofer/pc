@@ -1,6 +1,6 @@
 #!/bin/bash
-progs="linkedList"
-modes="seq mutex spin semaforo trans psemaforo"
+progs="linkedList barnes"
+modes="seq mutex spin semaforo psemaforo"
 not_modes="ptrans tbb"
 count="2 3 4 5 6 7 8 9 10 11"
 n_procs="2 4 8 16"

@@ -1,2 +1,20 @@
-# started on Thu Jun  7 01:59:52 2018
+# started on Thu Jun  7 03:51:31 2018
+
+
+ Performance counter stats for './barnes_spin':
+
+     118046,907745      task-clock (msec)         #    1,973 CPUs utilized          
+                69      context-switches          #    0,001 K/sec                  
+                 0      cpu-migrations            #    0,000 K/sec                  
+           318.988      page-faults               #    0,003 M/sec                  
+   343.292.988.357      cycles                    #    2,908 GHz                    
+   652.076.213.078      instructions              #    1,90  insn per cycle         
+    70.762.884.897      branches                  #  599,447 M/sec                  
+       950.823.728      branch-misses             #    1,34% of all branches        
+   224.798.645.472      L1-dcache-loads           # 1904,316 M/sec                  
+    14.606.316.501      L1-dcache-load-misses     #    6,50% of all L1-dcache hits  
+       680.082.486      LLC-loads                 #    5,761 M/sec                  
+       202.821.828      LLC-load-misses           #   29,82% of all LL-cache hits   
+
+      59,833917987 seconds time elapsed
 

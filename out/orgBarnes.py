@@ -12,31 +12,31 @@ secs = []
 with open(file) as f:
     line = ''
     for i in xrange(10):
-        line = f.readline()[:-2]
+        line = f.readline()[:-1]
         line = line.replace(".", "")
         ctx.append(int(line))
 
-        line = f.readline()[:-2]
+        line = f.readline()[:-1]
         line = line.replace(".", "")
         pagef.append(int(line))
 
-        line = f.readline()[:-2]
+        line = f.readline()[:-1]
         line = line.replace(",", ".")
         isns.append(float(line))
 
-        line = f.readline()[:-3]
+        line = f.readline()[:-2]
         line = line.replace(",", ".")
         branches.append(float(line))
 
-        line = f.readline()[:-3]
+        line = f.readline()[:-2]
         line = line.replace(",", ".")
-        lldm.append(float(line))
+        l1dm.append(float(line))
 
-        line = f.readline()[:-3]
+        line = f.readline()[:-2]
         line = line.replace(",", ".")
         llcm.append(float(line))
 
-        line = f.readline()[:-3]
+        line = f.readline()[:-1]
         line = line.replace(",", ".")
         secs.append(float(line))
 
